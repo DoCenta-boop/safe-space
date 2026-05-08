@@ -42,7 +42,6 @@ export default function PartnerDashboard() {
   return (
     <main className="min-h-[100dvh] bg-gray-100 flex flex-col p-6 font-sans">
       
-      {/* Hlavička - VÝRAZNEJŠIA */}
       <header className="mb-8 mt-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-black tracking-tight">Kaviareň Centrum</h1>
@@ -55,7 +54,6 @@ export default function PartnerDashboard() {
 
       <div className="flex-1 flex flex-col">
         
-        {/* STAV 1: Úvodná obrazovka */}
         {view === 'idle' && (
           <div className="animate-in fade-in flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
             <button 
@@ -68,7 +66,6 @@ export default function PartnerDashboard() {
 
             <div className="flex items-center gap-4 mb-10">
               <div className="flex-1 h-px bg-gray-300"></div>
-              {/* FIX: Text "Alebo ručne" je teraz čierny a hrubý */}
               <span className="font-black uppercase tracking-[0.2em] text-[10px] text-black">Alebo ručne</span>
               <div className="flex-1 h-px bg-gray-300"></div>
             </div>
@@ -78,7 +75,6 @@ export default function PartnerDashboard() {
                 type="text" 
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                {/* FIX: Placeholder je teraz tmavší (gray-500) a text vstupu je sýto čierny */}
                 placeholder="Zadajte 6 znakov"
                 className="flex-1 bg-transparent px-4 py-4 outline-none font-black text-xl tracking-[0.3em] text-black placeholder:text-gray-400 placeholder:font-bold placeholder:tracking-normal placeholder:text-sm"
                 maxLength={6}
@@ -94,7 +90,6 @@ export default function PartnerDashboard() {
           </div>
         )}
 
-        {/* STAV 2: Skenovanie kamery */}
         {view === 'scanning' && (
           <QRScanner 
             onScanSuccess={(text) => handleSearch(text)} 
@@ -102,7 +97,6 @@ export default function PartnerDashboard() {
           />
         )}
 
-        {/* STAV 3: Detaily - MAXIMÁLNY KONTRAST */}
         {view === 'details' && booking && (
           <div className="animate-in slide-in-from-bottom-8 duration-300 flex-1 flex flex-col">
             
@@ -110,7 +104,6 @@ export default function PartnerDashboard() {
               <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-6">
                 <div>
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Kód rezervácie</p>
-                  {/* FIX: ID rezervácie je font-black */}
                   <h2 className="text-4xl font-black text-black tracking-tight">{booking.id}</h2>
                 </div>
                 <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
