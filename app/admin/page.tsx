@@ -60,32 +60,34 @@ export default function AdminDashboard() {
   );
 
   return (
-    <main className="min-h-[100dvh] bg-gray-50 flex flex-col p-6">
+    <main className="min-h-[100dvh] bg-gray-50 flex flex-col p-6 font-sans">
       <header className="mb-8 mt-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-gray-800 tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-black text-black tracking-tight flex items-center gap-2">
             <Shield className="w-6 h-6 text-blue-600" /> Admin Panel
           </h1>
           <p className="text-gray-500 font-medium text-sm">Správa podnikov a kapacít</p>
         </div>
       </header>
 
-      {/* Rýchle štatistiky */}
+      {/* Rýchle štatistiky - S OPRAVENÝM KONTRASTOM */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
           <div className="text-gray-400 mb-1"><Store className="w-5 h-5" /></div>
-          <div className="text-2xl font-black">{locations.length}</div>
-          <div className="text-sm font-bold text-gray-400 uppercase">Podnikov</div>
+          {/* FIX: sýto čierne a väčšie čísla */}
+          <div className="text-3xl font-black text-black">{locations.length}</div>
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Podnikov</div>
         </div>
         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
           <div className="text-gray-400 mb-1"><Activity className="w-5 h-5" /></div>
-          <div className="text-2xl font-black">{totalOccupied}</div>
-          <div className="text-sm font-bold text-gray-400 uppercase">Odložených batožín</div>
+          {/* FIX: sýto čierne a väčšie čísla */}
+          <div className="text-3xl font-black text-black">{totalOccupied}</div>
+          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Batožín celkom</div>
         </div>
       </div>
 
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold text-gray-800">Zoznam podnikov</h2>
+        <h2 className="text-lg font-bold text-black">Zoznam podnikov</h2>
         <button 
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 active:scale-95"
@@ -96,28 +98,28 @@ export default function AdminDashboard() {
 
       {showAddForm && (
         <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-200 mb-6 animate-in fade-in slide-in-from-top-4">
-          <h3 className="font-bold mb-4">Nový podnik</h3>
-          <input type="text" placeholder="Názov (napr. Kaviareň)" value={newLoc.name} onChange={(e) => setNewLoc({...newLoc, name: e.target.value})} className="w-full p-3 rounded-xl border mb-3 bg-gray-50 outline-none focus:border-black" />
-          <input type="text" placeholder="Adresa" value={newLoc.address} onChange={(e) => setNewLoc({...newLoc, address: e.target.value})} className="w-full p-3 rounded-xl border mb-4 bg-gray-50 outline-none focus:border-black" />
+          <h3 className="font-bold mb-4 text-black text-lg">Nový podnik</h3>
+          <input type="text" placeholder="Názov (napr. Kaviareň)" value={newLoc.name} onChange={(e) => setNewLoc({...newLoc, name: e.target.value})} className="w-full p-3 rounded-xl border mb-3 bg-gray-50 outline-none focus:border-black text-black" />
+          <input type="text" placeholder="Adresa" value={newLoc.address} onChange={(e) => setNewLoc({...newLoc, address: e.target.value})} className="w-full p-3 rounded-xl border mb-4 bg-gray-50 outline-none focus:border-black text-black" />
           
-          <h4 className="text-sm font-bold text-gray-500 mb-2">Maximálna kapacita miest:</h4>
+          <h4 className="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">Maximálna kapacita miest:</h4>
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div className="bg-gray-50 p-3 rounded-xl border flex flex-col items-center">
-              <span className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><Briefcase className="w-3 h-3"/> Malé</span>
-              <input type="number" min="0" value={newLoc.smallCap} onChange={(e) => setNewLoc({...newLoc, smallCap: parseInt(e.target.value) || 0})} className="w-full p-2 text-center rounded-lg border font-bold" />
+              <span className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-1 uppercase"><Briefcase className="w-3 h-3"/> Malé</span>
+              <input type="number" min="0" value={newLoc.smallCap} onChange={(e) => setNewLoc({...newLoc, smallCap: parseInt(e.target.value) || 0})} className="w-full p-2 text-center rounded-lg border font-black text-black text-lg" />
             </div>
             <div className="bg-gray-50 p-3 rounded-xl border flex flex-col items-center">
-              <span className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><Luggage className="w-3 h-3"/> Stredné</span>
-              <input type="number" min="0" value={newLoc.mediumCap} onChange={(e) => setNewLoc({...newLoc, mediumCap: parseInt(e.target.value) || 0})} className="w-full p-2 text-center rounded-lg border font-bold" />
+              <span className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-1 uppercase"><Luggage className="w-3 h-3"/> Stredné</span>
+              <input type="number" min="0" value={newLoc.mediumCap} onChange={(e) => setNewLoc({...newLoc, mediumCap: parseInt(e.target.value) || 0})} className="w-full p-2 text-center rounded-lg border font-black text-black text-lg" />
             </div>
             <div className="bg-gray-50 p-3 rounded-xl border flex flex-col items-center">
-              <span className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><Package className="w-3 h-3"/> Veľké</span>
-              <input type="number" min="0" value={newLoc.largeCap} onChange={(e) => setNewLoc({...newLoc, largeCap: parseInt(e.target.value) || 0})} className="w-full p-2 text-center rounded-lg border font-bold" />
+              <span className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-1 uppercase"><Package className="w-3 h-3"/> Veľké</span>
+              <input type="number" min="0" value={newLoc.largeCap} onChange={(e) => setNewLoc({...newLoc, largeCap: parseInt(e.target.value) || 0})} className="w-full p-2 text-center rounded-lg border font-black text-black text-lg" />
             </div>
           </div>
 
-          <button onClick={handleAddLocation} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform">
-            Uložiť podnik
+          <button onClick={handleAddLocation} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl active:scale-95 transition-transform uppercase tracking-widest text-sm">
+            Uložiť nový podnik
           </button>
         </div>
       )}
@@ -134,50 +136,38 @@ export default function AdminDashboard() {
             <div key={loc.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-bold text-gray-800 text-lg">{loc.name}</h3>
-                  <p className="text-sm text-gray-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> {loc.address}</p>
+                  <h3 className="font-black text-black text-xl">{loc.name}</h3>
+                  <p className="text-sm text-gray-500 flex items-center gap-1 font-bold"><MapPin className="w-3 h-3" /> {loc.address}</p>
                 </div>
                 {isCompletelyFull ? (
-                  <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-lg uppercase tracking-wider">Plné</span>
+                  <span className="bg-red-100 text-red-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">Plné</span>
                 ) : (
-                  <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-lg uppercase tracking-wider">Aktívne</span>
+                  <span className="bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">Aktívne</span>
                 )}
               </div>
 
               {/* Ukazovatele kapacít */}
               <div className="grid grid-cols-3 gap-2">
-                {/* Malé batožiny */}
-                <div className="bg-gray-50 p-2 rounded-xl border border-gray-100">
-                  <div className="flex items-center justify-between mb-1">
-                    <Briefcase className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs font-bold text-gray-600">{loc.capacities.small.occupied}/{loc.capacities.small.max}</span>
+                {[
+                  { icon: Briefcase, cap: loc.capacities.small, free: sFree },
+                  { icon: Luggage, cap: loc.capacities.medium, free: mFree },
+                  { icon: Package, cap: loc.capacities.large, free: lFree }
+                ].map((item, idx) => (
+                  <div key={idx} className="bg-gray-50 p-2 rounded-xl border border-gray-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <item.icon className="w-4 h-4 text-black" />
+                      <span className="text-xs font-black text-black">
+                        {item.cap.occupied}<span className="text-gray-400 mx-0.5">/</span>{item.cap.max}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${item.free === 0 ? 'bg-red-500' : 'bg-black'}`} 
+                        style={{ width: `${item.cap.max === 0 ? 0 : (item.cap.occupied / item.cap.max) * 100}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div className={`h-full ${sFree === 0 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${loc.capacities.small.max === 0 ? 0 : (loc.capacities.small.occupied / loc.capacities.small.max) * 100}%` }}></div>
-                  </div>
-                </div>
-
-                {/* Stredné batožiny */}
-                <div className="bg-gray-50 p-2 rounded-xl border border-gray-100">
-                  <div className="flex items-center justify-between mb-1">
-                    <Luggage className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs font-bold text-gray-600">{loc.capacities.medium.occupied}/{loc.capacities.medium.max}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div className={`h-full ${mFree === 0 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${loc.capacities.medium.max === 0 ? 0 : (loc.capacities.medium.occupied / loc.capacities.medium.max) * 100}%` }}></div>
-                  </div>
-                </div>
-
-                {/* Veľké batožiny */}
-                <div className="bg-gray-50 p-2 rounded-xl border border-gray-100">
-                  <div className="flex items-center justify-between mb-1">
-                    <Package className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs font-bold text-gray-600">{loc.capacities.large.occupied}/{loc.capacities.large.max}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div className={`h-full ${lFree === 0 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${loc.capacities.large.max === 0 ? 0 : (loc.capacities.large.occupied / loc.capacities.large.max) * 100}%` }}></div>
-                  </div>
-                </div>
+                ))}
               </div>
 
             </div>
