@@ -1,67 +1,107 @@
 'use client';
-import { Camera } from 'lucide-react';
 import { useState } from 'react';
-
-type UserData = { name: string; email: string; phone: string };
+import { User, Mail, ShieldCheck, Loader2 } from 'lucide-react';
+import { createBooking } from '../lib/bookingService'; // Importujeme tvoju novú službu
 
 type Props = {
-  totalItemsCount: number;
-  onNext: (data: UserData) => void;
+  items: any[];
+  totalPrice: number;
+  locationId: string;
+  onSuccess: (bookingId: string, name: string, email: string) => void;
+  onBack: () => void;
 };
 
-export default function UserDetailsForm({ totalItemsCount, onNext }: Props) {
-  const [formData, setFormData] = useState<UserData>({ name: '', email: '', phone: '' });
+export default function UserDetailsForm({ items, totalPrice, locationId, onSuccess, onBack }: Props) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Striktná validácia pomocou regulárnych výrazov (Regex)
-  const isValidName = formData.name.trim().length > 2;
-  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
-  // Telefón musí začínať + alebo číslom a mať 9 až 15 znakov bez písmen
-  const isValidPhone = /^\+?[0-9\s]{9,15}$/.test(formData.phone);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email) return;
 
-  const isFormValid = isValidName && isValidEmail && isValidPhone;
+    setIsSubmitting(true);
+
+    // VOLANIE DATABÁZY
+    const result = await createBooking({
+      userName: name,
+      userEmail: email,
+      items: items,
+      totalPrice: totalPrice,
+      locationId: locationId
+    });
+
+    setIsSubmitting(false);
+
+    if (result.success && result.bookingId) {
+      // Ak sa podarilo uložiť, posunieme sa na zobrazenie lístka s reálnym ID
+      onSuccess(result.bookingId, name, email);
+    } else {
+      alert('Chyba pri vytváraní rezervácie. Skúste to znova.');
+    }
+  };
 
   return (
-    <div className="w-full">
-      <h3 className="text-xl font-bold mb-6 text-gray-800">Tvoje údaje</h3>
-      
-      <div className="space-y-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Meno a priezvisko</label>
-          <input 
-            type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})}
-            placeholder="Napr. Ján Novák"
-            className={`w-full p-4 rounded-2xl border-2 bg-gray-50 outline-none transition-all ${formData.name && !isValidName ? 'border-red-300 focus:border-red-500' : 'border-gray-100 focus:bg-white focus:border-black'}`}
-          />
+    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <h3 className="text-2xl font-black mb-2 text-black font-sans">Posledný krok</h3>
+      <p className="text-gray-500 mb-8 font-medium">Zadajte údaje pre vašu rezerváciu.</p>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-4">
+          <div className="relative">
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              required
+              type="text"
+              placeholder="Vaše meno"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-black transition-all font-bold text-black"
+            />
+          </div>
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              required
+              type="email"
+              placeholder="Váš e-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-black transition-all font-bold text-black"
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Skutočný e-mail (pre potvrdenie)</label>
-          <input 
-            type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})}
-            placeholder="jan.novak@email.sk"
-            className={`w-full p-4 rounded-2xl border-2 bg-gray-50 outline-none transition-all ${formData.email && !isValidEmail ? 'border-red-300 focus:border-red-500' : 'border-gray-100 focus:bg-white focus:border-black'}`}
-          />
+        <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 items-start border border-blue-100">
+          <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-blue-800 leading-relaxed font-medium">
+            Vaša batožina je u nás v bezpečí a poistená do výšky 500€. Platba prebehne až pri odovzdaní v podniku.
+          </p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Telefónne číslo</label>
-          <input 
-            type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})}
-            placeholder="+421 900 000 000"
-            className={`w-full p-4 rounded-2xl border-2 bg-gray-50 outline-none transition-all ${formData.phone && !isValidPhone ? 'border-red-300 focus:border-red-500' : 'border-gray-100 focus:bg-white focus:border-black'}`}
-          />
+        <div className="flex flex-col gap-3 pt-4">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-black text-white font-black py-5 rounded-2xl active:scale-95 transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 disabled:bg-gray-400"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" /> Vytváram rezerváciu...
+              </>
+            ) : (
+              'Rezervovať bezpečné miesto'
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-full text-gray-400 font-bold py-2 hover:text-black transition-colors text-sm uppercase tracking-widest"
+          >
+            Späť na výber batožiny
+          </button>
         </div>
-      </div>
-      
-      <button 
-        disabled={!isFormValid} onClick={() => onNext(formData)}
-        className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all ${
-          isFormValid ? 'bg-black text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        <Camera className="w-5 h-5" />
-        Odfotiť batožinu ({totalItemsCount}x)
-      </button>
+      </form>
     </div>
   );
 }
