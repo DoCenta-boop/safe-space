@@ -1,6 +1,5 @@
 'use client';
-import { QRCodeSVG } from 'qrcode.react';
-import { Download, CheckCircle2, Calendar, Map, Wallet, Mail } from 'lucide-react';
+import { CheckCircle2, QrCode, Download, Share2 } from 'lucide-react';
 
 type Props = {
   bookingId: string;
@@ -10,69 +9,48 @@ type Props = {
 };
 
 export default function ReservationTicket({ bookingId, userName, size, userEmail }: Props) {
-  const pinCode = bookingId.replace('PB-', '');
-
   return (
-    <div className="w-full flex flex-col items-center animate-in zoom-in-95 duration-500 pb-8">
-      <div className="bg-white border-2 border-dashed border-gray-200 rounded-3xl p-8 w-full flex flex-col items-center shadow-sm">
-        <div className="bg-green-100 text-green-600 p-3 rounded-full mb-4">
-          <CheckCircle2 className="w-8 h-8" />
+    <div className="w-full animate-in fade-in zoom-in duration-500">
+      <div className="bg-white rounded-[2.5rem] border-2 border-gray-100 p-8 shadow-sm flex flex-col items-center">
+        <div className="bg-green-50 p-4 rounded-full mb-6">
+          <CheckCircle2 className="w-12 h-12 text-green-500" />
         </div>
-        
-        <h2 className="text-xl font-bold text-gray-800 mb-1">Rezervácia potvrdená!</h2>
-        <p className="text-gray-500 text-center text-sm mb-6 flex items-center justify-center gap-1">
-          <Mail className="w-4 h-4" /> Kópia bola odoslaná na {userEmail}
-        </p>
-        
-        {/* QR KÓD A ZÁLOŽNÝ PIN */}
-        <div className="bg-white p-6 border-2 border-gray-100 rounded-2xl mb-6 mt-2 flex flex-col items-center w-full shadow-sm">
-          <QRCodeSVG value={bookingId} size={180} />
-          
-          <div className="mt-6 text-center w-full pt-4 border-t-2 border-dashed border-gray-100">
-            <span className="text-xs text-gray-400 uppercase tracking-wider block mb-1">Záložný kód</span>
-            <span className="text-4xl font-black tracking-[0.2em] text-gray-800">{pinCode}</span>
+        <h2 className="text-2xl font-black text-black text-center mb-1 font-sans">Rezervácia pripravená</h2>
+        <p className="text-gray-500 text-sm mb-8 text-center font-sans">Ukážte tento kód pri odovzdaní batožiny.</p>
+
+        {/* OPRAVA: 6-miestny kód je teraz font-black a text-black */}
+        <div className="w-full bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 mb-8 flex flex-col items-center">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-3">Váš unikátny kód</span>
+          <span className="text-4xl font-black text-black tracking-widest font-mono">
+            {bookingId}
+          </span>
+        </div>
+
+        <div className="w-full space-y-4 mb-8">
+          <div className="flex justify-between items-center px-2">
+            <span className="text-gray-400 font-bold text-xs uppercase tracking-wider">Meno</span>
+            <span className="text-black font-black">{userName}</span>
+          </div>
+          <div className="flex justify-between items-center px-2">
+            <span className="text-gray-400 font-bold text-xs uppercase tracking-wider">Počet</span>
+            <span className="text-black font-black">{size}</span>
+          </div>
+          <div className="flex justify-between items-center px-2">
+            <span className="text-gray-400 font-bold text-xs uppercase tracking-wider">E-mail</span>
+            <span className="text-black font-black text-sm">{userEmail}</span>
           </div>
         </div>
 
-        <div className="w-full space-y-3 border-t pt-6">
-          <div className="flex justify-between">
-            <span className="text-gray-400">Zákazník:</span>
-            <span className="font-bold">{userName.split(' ')[0]}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Batožina:</span>
-            <span className="font-bold uppercase">{size}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Miesto:</span>
-            <span className="font-bold text-right">Kaviareň Centrum</span>
-          </div>
-        </div>
-      </div>
-
-      {/* TLAČIDLÁ PRE OFFLINE PRÍSTUP A NAVIGÁCIU */}
-      <div className="w-full mt-4 space-y-3">
-        <button className="w-full flex items-center justify-center gap-3 bg-black text-white font-bold py-4 rounded-2xl active:scale-95 transition-transform shadow-lg shadow-black/20">
-          <Wallet className="w-5 h-5" />
-          Pridať do Apple / Google Wallet
-        </button>
-        
-        <div className="flex gap-3 w-full">
-          <button className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-800 font-bold py-3.5 rounded-2xl active:scale-95 transition-transform">
-            <Calendar className="w-5 h-5" />
-            Kalendár
+        <div className="w-full grid grid-cols-2 gap-3">
+          <button className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-2xl border border-gray-100 active:scale-95 transition-transform gap-2">
+            <Download className="w-5 h-5 text-gray-600" />
+            <span className="text-[10px] font-black text-gray-600 uppercase">Uložiť PDF</span>
           </button>
-          
-          <button className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 font-bold py-3.5 rounded-2xl active:scale-95 transition-transform">
-            <Map className="w-5 h-5" />
-            Navigovať
+          <button className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-2xl border border-gray-100 active:scale-95 transition-transform gap-2">
+            <Share2 className="w-5 h-5 text-gray-600" />
+            <span className="text-[10px] font-black text-gray-600 uppercase">Zdieľať</span>
           </button>
         </div>
-
-        <button onClick={() => window.print()} className="w-full flex items-center justify-center gap-2 text-gray-500 font-bold py-3 active:scale-95 transition-transform mt-2">
-          <Download className="w-5 h-5" />
-          Stiahnuť ako PDF / Snímka
-        </button>
       </div>
     </div>
   );
