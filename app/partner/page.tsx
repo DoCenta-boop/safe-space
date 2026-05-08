@@ -1,46 +1,63 @@
 'use client';
 
 import { useState } from 'react';
-import { ScanLine, Search, Package, Check, ArrowRight } from 'lucide-react';
+import { ScanLine, Search, Package, Check, ArrowRight, Loader2 } from 'lucide-react';
 import QRScanner from '../../components/QRScanner';
-
-// Simulácia dát z databázy
-const MOCK_BOOKING = {
-  id: 'PB-X7B9A2',
-  customerName: 'Ján Novák',
-  itemsCount: 2,
-  status: 'PENDING',
-  images: [
-    'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=300&q=80',
-    'https://images.unsplash.com/photo-1547941126-3d5322b218b0?auto=format&fit=crop&w=300&q=80'
-  ]
-};
+// Importujeme funkcie z našej databázovej služby
+import { getBookingByCode, updateBookingStatus } from '../../lib/bookingService';
 
 export default function PartnerDashboard() {
   const [view, setView] = useState<'idle' | 'scanning' | 'details'>('idle');
   const [manualCode, setManualCode] = useState('');
-  const [booking, setBooking] = useState<typeof MOCK_BOOKING | null>(null);
+  const [booking, setBooking] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSearch = (code: string) => {
-    const formattedCode = code.startsWith('PB-') ? code : `PB-${code.toUpperCase()}`;
-    setBooking({ ...MOCK_BOOKING, id: formattedCode });
-    setView('details');
+  // UPRAVENÉ: Hľadanie presne podľa zadaného kódu (bez PB-)
+  const handleSearch = async (code: string) => {
+    if (code.length < 6) return;
+    
+    setIsLoading(true);
+    
+    // Hľadáme kód presne tak, ako ho personál zadal (prevedený na veľké písmená)
+    const result = await getBookingByCode(code.toUpperCase());
+    
+    setIsLoading(false);
+
+    if (result.success) {
+      setBooking(result.data);
+      setView('details');
+    } else {
+      alert("Rezervácia s kódom " + code.toUpperCase() + " nebola nájdená.");
+    }
   };
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!booking) return;
-    if (booking.status === 'PENDING') {
-      alert('Batožina bola úspešne prevzatá a uložená!');
-      setBooking({ ...booking, status: 'STORED' });
+    
+    setIsLoading(true);
+    const newStatus = booking.status === 'PENDING' ? 'STORED' : 'COMPLETED';
+    
+    const result = await updateBookingStatus(booking.id, newStatus);
+    
+    setIsLoading(false);
+
+    if (result.success) {
+      if (newStatus === 'STORED') {
+        alert('Batožina bola úspešne prevzatá a uložená!');
+        setBooking({ ...booking, status: 'STORED' });
+      } else {
+        alert('Batožina bola odovzdaná zákazníkovi!');
+        setView('idle');
+        setBooking(null);
+        setManualCode('');
+      }
     } else {
-      alert('Batožina bola odovzdaná zákazníkovi!');
-      setView('idle');
-      setBooking(null);
+      alert('Chyba pri aktualizácii stavu.');
     }
   };
 
   return (
-    <main className="min-h-[100dvh] bg-gray-100 flex flex-col p-6 font-sans">
+    <main className="min-h-[100dvh] bg-gray-100 flex flex-col p-6 font-sans text-black">
       
       <header className="mb-8 mt-4 flex items-center justify-between">
         <div>
@@ -81,10 +98,10 @@ export default function PartnerDashboard() {
               />
               <button 
                 onClick={() => handleSearch(manualCode)}
-                disabled={manualCode.length < 5}
+                disabled={manualCode.length < 6 || isLoading}
                 className="bg-black text-white px-6 rounded-2xl font-black disabled:opacity-20 flex items-center justify-center active:scale-95 transition-transform"
               >
-                <Search className="w-6 h-6" />
+                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
               </button>
             </div>
           </div>
@@ -104,52 +121,60 @@ export default function PartnerDashboard() {
               <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-6">
                 <div>
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Kód rezervácie</p>
-                  <h2 className="text-4xl font-black text-black tracking-tight">{booking.id}</h2>
+                  <h2 className="text-4xl font-black text-black tracking-tight">{booking.bookingId}</h2>
                 </div>
                 <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                  booking.status === 'PENDING' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-green-100 text-green-700 border border-green-200'
+                  booking.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
                 }`}>
-                  {booking.status === 'PENDING' ? 'Príjem' : 'Výdaj'}
+                  {booking.status === 'PENDING' ? 'Príjem' : 'Uložené'}
                 </span>
               </div>
 
-              <div className="space-y-5 mb-8">
+              <div className="space-y-5 mb-8 text-black">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Zákazník</span>
-                  <span className="font-black text-black text-lg">{booking.customerName}</span>
+                  <span className="font-black text-lg">{booking.userName}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Batožina</span>
-                  <span className="font-black text-black text-lg flex items-center gap-2">
-                    <Package className="w-5 h-5" /> {booking.itemsCount} ks
+                  <span className="font-black text-lg flex items-center gap-2">
+                    <Package className="w-5 h-5" /> {booking.items?.length || 0} ks
                   </span>
                 </div>
               </div>
 
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 text-center">Fotografie pre kontrolu</p>
-              <div className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar">
-                {booking.images.map((img, i) => (
-                  <img 
-                    key={i} 
-                    src={img} 
-                    alt="Batožina" 
-                    className="w-40 h-40 object-cover rounded-3xl shrink-0 snap-center border-4 border-gray-50 shadow-sm"
-                  />
-                ))}
-              </div>
+              {/* Fotografie z databázy (ak existujú) */}
+              {booking.images && booking.images.length > 0 && (
+                <>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 text-center">Fotografie pre kontrolu</p>
+                  <div className="flex gap-4 overflow-x-auto pb-2 snap-x no-scrollbar">
+                    {booking.images.map((img: string, i: number) => (
+                      <img 
+                        key={i} 
+                        src={img} 
+                        alt="Batožina" 
+                        className="w-40 h-40 object-cover rounded-3xl shrink-0 snap-center border-4 border-gray-50 shadow-sm"
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mt-auto pt-4 pb-6">
               <button 
                 onClick={handleAction}
+                disabled={isLoading}
                 className={`w-full font-black text-lg py-6 rounded-[2rem] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform uppercase tracking-widest ${
                   booking.status === 'PENDING' ? 'bg-black text-white shadow-black/20' : 'bg-green-600 text-white shadow-green-600/20'
                 }`}
               >
-                {booking.status === 'PENDING' ? (
-                  <><Check className="w-7 h-7" /> Prevziať</>
-                ) : (
-                  <><ArrowRight className="w-7 h-7" /> Odovzdať</>
+                {isLoading ? <Loader2 className="animate-spin w-7 h-7" /> : (
+                  booking.status === 'PENDING' ? (
+                    <><Check className="w-7 h-7" /> Prevziať</>
+                  ) : (
+                    <><ArrowRight className="w-7 h-7" /> Odovzdať</>
+                  )
                 )}
               </button>
               
