@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Download, Share2, CheckCircle2, Loader2, Ticket } from 'lucide-react';
-// ZMENA 1: Používame SVG, ktoré prehliadač okamžite vidí v kóde
+// PRIDANÝ IMPORT MapPin pre navigačné tlačidlo
+import { Download, Share2, CheckCircle2, Loader2, Ticket, MapPin } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react'; 
 import { toJpeg } from 'html-to-image';
 
@@ -13,9 +13,10 @@ type Props = {
   userEmail: string;
   userPhone: string;
   days: number;
+  mapsLink?: string; // NOVÝ PARAMETER PRE NAVIGÁCIU
 };
 
-export default function ReservationTicket({ bookingId, userName, size, userEmail, userPhone, days }: Props) {
+export default function ReservationTicket({ bookingId, userName, size, userEmail, userPhone, days, mapsLink }: Props) {
   const ticketRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -96,9 +97,8 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
     <div className="w-full flex flex-col items-center relative">
       
       {/* -------------------------------------------------------------
-        ZMENA 2: EXTRÉMNY ANTI-LAZY-LOADING HACK PRE MOBILY
-        Element je priamo na obrazovke (aby ho prehliadač nevynechal),
-        ale je priehľadný (0.01) a úplne vzadu, takže ho zákazník nevidí.
+        EXTRÉMNY ANTI-LAZY-LOADING HACK PRE MOBILY
+        Element je priamo na obrazovke, priehľadný a vzadu.
         -------------------------------------------------------------
       */}
       <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -50, opacity: 0.01, pointerEvents: 'none' }}>
@@ -178,6 +178,13 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       <h2 className="text-3xl font-black text-black mb-2 text-center tracking-tight">Rezervácia hotová!</h2>
       <p className="text-gray-500 font-bold text-sm text-center mb-8">Uložte si lístok a ukážte ho pri príchode.</p>
 
+      {/* --- TLAČIDLO NAVIGOVAŤ --- */}
+      {mapsLink && (
+        <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="w-full max-w-sm bg-blue-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20 mb-6 active:scale-95 transition-transform">
+          <MapPin className="w-5 h-5" /> Spustiť navigáciu k podniku
+        </a>
+      )}
+
       <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-xl border border-gray-100 relative overflow-hidden mb-8">
         <div className="absolute top-0 left-0 w-full h-3 bg-black"></div>
         <div className="flex items-center gap-2 mb-8 mt-2">
@@ -204,7 +211,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
         </div>
       </div>
 
-      <div className="flex gap-4 w-full px-2">
+      <div className="flex gap-4 w-full max-w-sm px-2">
         <button onClick={handleDownload} disabled={isGenerating} className="flex-1 py-4 bg-gray-200 text-black font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform">
           {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Download className="w-5 h-5" /> Uložiť</>}
         </button>

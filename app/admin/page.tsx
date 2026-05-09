@@ -11,6 +11,7 @@ export type Location = {
   id: string; name: string; address: string; pin?: string; slug?: string; isActive?: boolean;
   capacities: { small: SizeCapacity; medium: SizeCapacity; large: SizeCapacity };
   mapPosition: { top: string; left: string }; 
+  lat?: number; lng?: number; mapsLink?: string; // PRIDANÉ GPS ÚDAJE
 };
 
 export default function AdminDashboard() {
@@ -28,10 +29,14 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'stats' | 'bookings' | 'manage' | 'settings'>('stats');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newLoc, setNewLoc] = useState({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2 });
+  
+  // PRIDANÉ DO STATE PRE NOVÝ PODNIK
+  const [newLoc, setNewLoc] = useState({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2, lat: '', lng: '', mapsLink: '' });
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editLoc, setEditLoc] = useState({ name: '', address: '', smallCap: 0, mediumCap: 0, largeCap: 0 });
+  
+  // PRIDANÉ DO STATE PRE ÚPRAVU PODNIKU
+  const [editLoc, setEditLoc] = useState({ name: '', address: '', smallCap: 0, mediumCap: 0, largeCap: 0, lat: '', lng: '', mapsLink: '' });
 
   const [filterLocation, setFilterLocation] = useState<string>('ALL');
   const [filterPeriod, setFilterPeriod] = useState<string>('ALL');
@@ -138,15 +143,34 @@ export default function AdminDashboard() {
       capacities: {
         small: { max: newLoc.smallCap, occupied: 0 }, medium: { max: newLoc.mediumCap, occupied: 0 }, large: { max: newLoc.largeCap, occupied: 0 }
       },
-      mapPosition: { top: '50%', left: '50%' } 
+      mapPosition: { top: '50%', left: '50%' },
+      // ODOSIELAME GPS ÚDAJE
+      lat: parseFloat(newLoc.lat) || 0,
+      lng: parseFloat(newLoc.lng) || 0,
+      mapsLink: newLoc.mapsLink
     });
-    if (result.success) { alert("Podnik vytvorený!"); loadData(); setShowAddForm(false); setNewLoc({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2 }); }
+    if (result.success) { 
+      alert("Podnik vytvorený!"); 
+      loadData(); 
+      setShowAddForm(false); 
+      setNewLoc({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2, lat: '', lng: '', mapsLink: '' }); 
+    }
     setIsSubmitting(false);
   };
 
   const handleEditClick = (loc: Location) => {
     setEditingId(loc.id);
-    setEditLoc({ name: loc.name, address: loc.address, smallCap: loc.capacities.small.max, mediumCap: loc.capacities.medium.max, largeCap: loc.capacities.large.max });
+    setEditLoc({ 
+      name: loc.name, 
+      address: loc.address, 
+      smallCap: loc.capacities.small.max, 
+      mediumCap: loc.capacities.medium.max, 
+      largeCap: loc.capacities.large.max,
+      // NAČÍTANIE GPS DO FORMULÁRA
+      lat: loc.lat?.toString() || '', 
+      lng: loc.lng?.toString() || '', 
+      mapsLink: loc.mapsLink || ''
+    });
   };
 
   const handleSaveEdit = async () => {
@@ -160,7 +184,11 @@ export default function AdminDashboard() {
           small: { max: editLoc.smallCap, occupied: originalLoc.capacities.small.occupied },
           medium: { max: editLoc.mediumCap, occupied: originalLoc.capacities.medium.occupied },
           large: { max: editLoc.largeCap, occupied: originalLoc.capacities.large.occupied }
-        }
+        },
+        // ULOŽENIE GPS PO ÚPRAVE
+        lat: parseFloat(editLoc.lat) || 0,
+        lng: parseFloat(editLoc.lng) || 0,
+        mapsLink: editLoc.mapsLink
       });
       setEditingId(null); loadData();
     }
@@ -378,6 +406,14 @@ export default function AdminDashboard() {
                   <input type="text" placeholder="Názov" value={newLoc.name} onChange={(e) => setNewLoc({...newLoc, name: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
                   <input type="text" placeholder="Adresa" value={newLoc.address} onChange={(e) => setNewLoc({...newLoc, address: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
                 </div>
+                
+                {/* PRIDANÉ GPS POLÍČKA */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <input type="text" placeholder="Lat (napr. 48.148)" value={newLoc.lat} onChange={(e) => setNewLoc({...newLoc, lat: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
+                  <input type="text" placeholder="Lng (napr. 17.107)" value={newLoc.lng} onChange={(e) => setNewLoc({...newLoc, lng: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
+                  <input type="text" placeholder="Google Maps Link" value={newLoc.mapsLink} onChange={(e) => setNewLoc({...newLoc, mapsLink: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
+                </div>
+
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div className="text-center"><span className="text-[10px] font-black text-gray-400 uppercase">Malé</span><input type="number" value={newLoc.smallCap} onChange={(e) => setNewLoc({...newLoc, smallCap: parseInt(e.target.value) || 0})} className="w-full p-3 border rounded-xl text-center font-black" /></div>
                   <div className="text-center"><span className="text-[10px] font-black text-gray-400 uppercase">Stredné</span><input type="number" value={newLoc.mediumCap} onChange={(e) => setNewLoc({...newLoc, mediumCap: parseInt(e.target.value) || 0})} className="w-full p-3 border rounded-xl text-center font-black" /></div>
@@ -399,6 +435,11 @@ export default function AdminDashboard() {
                       <div className="space-y-3 mb-4">
                         <input type="text" value={editLoc.name} onChange={(e) => setEditLoc({...editLoc, name: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         <input type="text" value={editLoc.address} onChange={(e) => setEditLoc({...editLoc, address: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
+                        
+                        {/* PRIDANÉ GPS POLÍČKA PRE ÚPRAVU */}
+                        <input type="text" placeholder="Lat" value={editLoc.lat} onChange={(e) => setEditLoc({...editLoc, lat: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
+                        <input type="text" placeholder="Lng" value={editLoc.lng} onChange={(e) => setEditLoc({...editLoc, lng: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
+                        <input type="text" placeholder="Google Maps Link" value={editLoc.mapsLink} onChange={(e) => setEditLoc({...editLoc, mapsLink: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                       </div>
                       <div className="grid grid-cols-3 gap-2 mb-6">
                         <div className="text-center"><span className="text-[9px] font-black text-gray-500 uppercase">Max Malé</span><input type="number" value={editLoc.smallCap} onChange={(e) => setEditLoc({...editLoc, smallCap: parseInt(e.target.value) || 0})} className="w-full p-2 border rounded-lg text-center font-black" /></div>
@@ -419,7 +460,18 @@ export default function AdminDashboard() {
                       <div>
                         {!isActive && <span className="bg-red-100 text-red-600 text-[9px] font-black uppercase px-2 py-1 rounded-md mb-2 inline-block">Pozastavené</span>}
                         <h3 className="font-black text-xl">{loc.name}</h3>
-                        <p className="text-xs text-gray-400 font-bold"><MapPin className="w-3 h-3 inline mr-1"/> {loc.address}</p>
+                        
+                        <p className="text-xs text-gray-400 font-bold flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3"/> {loc.address}
+                        </p>
+                        
+                        {/* ZOBRAZENIE GOOGLE MAPS LINKU V ZOZNAME */}
+                        {loc.mapsLink && (
+                          <a href={loc.mapsLink} target="_blank" className="text-blue-500 text-[10px] font-bold mt-1 inline-block">
+                            🔗 Otvoriť Maps
+                          </a>
+                        )}
+
                       </div>
                       <div className="flex gap-1">
                         <button onClick={() => handleToggleActive(loc.id, isActive, loc.name)} className={`p-2 rounded-lg transition-colors ${isActive ? 'text-orange-400 hover:bg-orange-50' : 'text-green-500 hover:bg-green-50'}`} title={isActive ? "Pozastaviť podnik" : "Aktivovať podnik"}>{isActive ? <PauseCircle className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}</button>
