@@ -260,7 +260,7 @@ export default function Home() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span><span className="font-black text-sm md:text-base text-right max-w-[60%]">{selectedLocation?.name}</span></div>
                   <div className="flex justify-between items-center"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span><span className="font-black text-sm md:text-base text-right max-w-[60%] leading-tight">{luggageSummary}</span></div>
-                  <div className="flex justify-between items-center"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Doba</span><span className="font-black text-sm md:text-base">{bookingDays} {bookingDays === 1 ? 'deň' : bookingDays < 5 ? 'dni' : 'dní'}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Doba</span><span className="font-black text-sm md:text-base">24 hodín</span></div>
                 </div>
                 
                 <div className="flex justify-between items-center pt-5 border-t-2 border-gray-100 mt-5">
