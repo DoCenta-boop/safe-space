@@ -1,5 +1,5 @@
 import { db, storage } from './firebase'; 
-import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, updateDoc, doc, deleteDoc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, updateDoc, doc, deleteDoc, setDoc, getDoc, onSnapshot, increment } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage'; 
 
 // ==========================================
@@ -28,7 +28,18 @@ export async function createBooking(bookingData: any, capturedImages: {id: strin
       }
     }
 
-    // 3. ULOŽENIE REZERVÁCIE DO DATABÁZY
+    // 3. VÝPOČET KAPACÍT BATOŽINY ZÁKAZNÍKA
+    let sCount = 0, mCount = 0, lCount = 0;
+    if (bookingData.items) {
+      bookingData.items.forEach((item: any) => {
+        const str = String(item.id || item.label).toLowerCase();
+        if (str.includes('small') || str.includes('mal')) sCount++;
+        else if (str.includes('medium') || str.includes('stred')) mCount++;
+        else if (str.includes('large') || str.includes('vel') || str.includes('veľ')) lCount++;
+      });
+    }
+
+    // 4. ULOŽENIE REZERVÁCIE DO DATABÁZY
     const docRef = await addDoc(collection(db, "bookings"), {
       ...bookingData,
       bookingId: shortId,
@@ -36,6 +47,15 @@ export async function createBooking(bookingData: any, capturedImages: {id: strin
       status: 'PENDING',
       createdAt: serverTimestamp(),
     });
+
+    // 5. OBSADÍME MIESTA V PODNIKU (Zvýšime 'occupied' hodnotu)
+    if (bookingData.locationId && (sCount > 0 || mCount > 0 || lCount > 0)) {
+      await updateDoc(doc(db, "locations", bookingData.locationId), {
+        "capacities.small.occupied": increment(sCount),
+        "capacities.medium.occupied": increment(mCount),
+        "capacities.large.occupied": increment(lCount)
+      });
+    }
 
     return { success: true, bookingId: shortId, firestoreId: docRef.id };
   } catch (error) {
@@ -68,6 +88,31 @@ export async function updateBookingStatus(id: string, status: string) {
     if (status === 'STORED') {
       updateData.storedAt = serverTimestamp();
     }
+
+    // Ak sa batožina vyzdvihla (COMPLETED), UVOĽNÍME MIESTO V PODNIKU
+    if (status === 'COMPLETED') {
+      const bookingDoc = await getDoc(doc(db, "bookings", id));
+      if (bookingDoc.exists()) {
+        const bData = bookingDoc.data();
+        if (bData.locationId && bData.items) {
+          let sCount = 0, mCount = 0, lCount = 0;
+          bData.items.forEach((item: any) => {
+            const str = String(item.id || item.label).toLowerCase();
+            if (str.includes('small') || str.includes('mal')) sCount++;
+            else if (str.includes('medium') || str.includes('stred')) mCount++;
+            else if (str.includes('large') || str.includes('vel') || str.includes('veľ')) lCount++;
+          });
+          
+          if (sCount > 0 || mCount > 0 || lCount > 0) {
+            await updateDoc(doc(db, "locations", bData.locationId), {
+              "capacities.small.occupied": increment(-sCount),
+              "capacities.medium.occupied": increment(-mCount),
+              "capacities.large.occupied": increment(-lCount)
+            });
+          }
+        }
+      }
+    }
     
     await updateDoc(doc(db, "bookings", id), updateData);
     return { success: true };
@@ -79,6 +124,29 @@ export async function updateBookingStatus(id: string, status: string) {
 
 export async function cancelBookingStatus(id: string) {
   try {
+    // Ak zákazník stornuje, musíme tiež UVOĽNIŤ MIESTO V PODNIKU
+    const bookingDoc = await getDoc(doc(db, "bookings", id));
+    if (bookingDoc.exists()) {
+      const bData = bookingDoc.data();
+      if (bData.locationId && bData.items) {
+        let sCount = 0, mCount = 0, lCount = 0;
+        bData.items.forEach((item: any) => {
+          const str = String(item.id || item.label).toLowerCase();
+          if (str.includes('small') || str.includes('mal')) sCount++;
+          else if (str.includes('medium') || str.includes('stred')) mCount++;
+          else if (str.includes('large') || str.includes('vel') || str.includes('veľ')) lCount++;
+        });
+
+        if (sCount > 0 || mCount > 0 || lCount > 0) {
+          await updateDoc(doc(db, "locations", bData.locationId), {
+            "capacities.small.occupied": increment(-sCount),
+            "capacities.medium.occupied": increment(-mCount),
+            "capacities.large.occupied": increment(-lCount)
+          });
+        }
+      }
+    }
+
     await updateDoc(doc(db, "bookings", id), { status: 'CANCELLED' });
     return { success: true };
   } catch (error) {
