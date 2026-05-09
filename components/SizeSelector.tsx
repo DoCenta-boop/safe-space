@@ -24,7 +24,7 @@ const SIZES = [
     label: 'Veľká batožina', 
     price: 4, 
     icon: Luggage, 
-    desc: 'Veľký kufor do podpalubia (80x50x 30 cm)' 
+    desc: 'Veľký cestovný kufor (80x50x 30 cm)' 
   },
 ];
 
