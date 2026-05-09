@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { ScanLine, Search, Package, Check, ArrowRight, Loader2, KeyRound, AlertCircle, Phone, List, QrCode } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import QRScanner from '../../../components/QRScanner';
-import { getBookingByCode, updateBookingStatus, getLocationBySlug, getActiveBookingsForLocation } from '../../../lib/bookingService';
+import { getBookingByCode, updateBookingStatus, getLocationBySlug, listenToActiveBookings } from '../../../lib/bookingService';
 
 export default function PartnerDashboard() {
   const params = useParams();
@@ -13,7 +13,7 @@ export default function PartnerDashboard() {
   const [location, setLocation] = useState<any | null>(null);
   const [isLoadingInit, setIsLoadingInit] = useState(true);
   
-  // Prihlasovanie
+  // Prihlasovanie & Relácia
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -21,52 +21,79 @@ export default function PartnerDashboard() {
   // Stavy aplikácie
   const [activeTab, setActiveTab] = useState<'scan' | 'list'>('scan');
   const [activeBookings, setActiveBookings] = useState<any[]>([]);
-  const [isLoadingList, setIsLoadingList] = useState(false);
 
   const [isScanning, setIsScanning] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [booking, setBooking] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Inicializácia podniku
+  // Inicializácia podniku a kontrola existujúceho prihlásenia
   useEffect(() => {
     async function init() {
       if (!slug) return;
       const result = await getLocationBySlug(slug);
+      
       if (result.success && result.data) {
         setLocation(result.data);
+        
+        // Kontrola, či už je personál prihlásený z minula
+        const savedAuth = localStorage.getItem(`auth_${slug}`);
+        if (savedAuth) {
+          const authData = JSON.parse(savedAuth); // OPRAVENÉ
+          const timePassed = new Date().getTime() - authData.timestamp;
+          const hours12 = 12 * 60 * 60 * 1000;
+
+          // OPRAVENÉ (result.data as any).pin kvôli TypeScriptu
+          if (timePassed < hours12 && authData.pin === (result.data as any).pin) {
+            setIsAuthenticated(true);
+          } else {
+            // Relácia vypršala alebo sa zmenil PIN
+            localStorage.removeItem(`auth_${slug}`);
+          }
+        }
       }
       setIsLoadingInit(false);
     }
     init();
   }, [slug]);
 
-  // Načítanie zoznamu aktívnych rezervácií
-  const loadActiveBookings = async () => {
-    if (!location) return;
-    setIsLoadingList(true);
-    const result = await getActiveBookingsForLocation(location.id);
-    if (result.success && result.data) {
-      setActiveBookings(result.data);
-    }
-    setIsLoadingList(false);
-  };
-
+  // Nastavenie živého počúvania databázy (Live Updates)
   useEffect(() => {
-    if (isAuthenticated && activeTab === 'list') {
-      loadActiveBookings();
+    let unsubscribe: () => void;
+
+    // Počúvame iba vtedy, ak je overený a podnik je načítaný
+    if (isAuthenticated && location) {
+      unsubscribe = listenToActiveBookings(location.id, (liveData) => {
+        setActiveBookings(liveData);
+      });
     }
-  }, [activeTab, isAuthenticated]);
+
+    // Odpojenie poslucháča pri odchode zo stránky, aby sme nezaťažovali Firebase
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isAuthenticated, location]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (pinInput === location?.pin) {
       setIsAuthenticated(true);
       setLoginError('');
+      // Uloženie úspešného prihlásenia s aktuálnym časom
+      localStorage.setItem(`auth_${slug}`, JSON.stringify({
+        pin: pinInput,
+        timestamp: new Date().getTime()
+      }));
     } else {
       setLoginError('Nesprávny PIN kód');
       setPinInput('');
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(`auth_${slug}`);
+    setIsAuthenticated(false);
+    setPinInput('');
   };
 
   const handleSearch = async (code: string) => {
@@ -76,7 +103,6 @@ export default function PartnerDashboard() {
     setIsLoading(false);
 
     if (result.success && result.data) {
-      // Ošetrenie TypeScript chyby pomocou (result.data as any)
       if ((result.data as any).locationId !== location.id) {
         alert("Pozor! Táto batožina je rezervovaná pre iný podnik.");
         return;
@@ -104,7 +130,7 @@ export default function PartnerDashboard() {
         setBooking(null);
         setManualCode('');
       }
-      loadActiveBookings();
+      // Netreba volať loadActiveBookings(), live poslucháč to urobí automaticky!
     }
   };
 
@@ -117,8 +143,10 @@ export default function PartnerDashboard() {
         <div className="w-full max-w-md bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center">
           <KeyRound className="w-12 h-12 text-blue-600 mx-auto mb-6" />
           <h1 className="text-2xl font-black text-black mb-2">{location.name}</h1>
+          <p className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest">Partnerský prístup</p>
           <form onSubmit={handleLogin}>
             <input type="password" inputMode="numeric" maxLength={6} value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder="••••••" className="w-full text-center text-4xl tracking-[0.5em] font-mono font-black py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl mb-4 outline-none focus:border-black" />
+            {loginError && <p className="text-red-500 font-bold text-xs mb-4 uppercase">{loginError}</p>}
             <button type="submit" disabled={pinInput.length !== 6} className="w-full bg-black text-white font-black py-5 rounded-2xl active:scale-95 transition-all shadow-xl disabled:opacity-30">Vstúpiť</button>
           </form>
         </div>
@@ -131,19 +159,18 @@ export default function PartnerDashboard() {
   return (
     <main className="relative h-[100dvh] w-full bg-gray-100 flex flex-col overflow-hidden font-sans text-black">
       
-      {/* VRCHNÁ ČASŤ (Hlavička) */}
       <header className="p-6 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-xl font-black text-black tracking-tight">{location.name}</h1>
-          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">Partner Portal</p>
+          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Pripojené online
+          </p>
         </div>
-        <button onClick={() => setIsAuthenticated(false)} className="text-gray-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-colors">Odhlásiť</button>
+        <button onClick={handleLogout} className="text-gray-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-colors">Odhlásiť</button>
       </header>
 
-      {/* STREDNÁ ČASŤ (Obsah) */}
       <div className="flex-1 overflow-y-auto p-6 pb-32">
         {booking ? (
-          // DETAIL REZERVÁCIE
           <div className="animate-in slide-in-from-bottom-8 duration-300 max-w-md mx-auto w-full">
             <div className="bg-white rounded-[2.5rem] p-8 shadow-xl mb-6 border border-gray-100 mt-4">
               <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-6">
@@ -151,7 +178,6 @@ export default function PartnerDashboard() {
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Kód rezervácie</p>
                   <h2 className="text-4xl font-black text-black tracking-tight font-mono">{booking.bookingId}</h2>
                 </div>
-                {/* Vylepšené statusy */}
                 <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
                   booking.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : 
                   booking.status === 'STORED' ? 'bg-green-100 text-green-700' :
@@ -181,7 +207,6 @@ export default function PartnerDashboard() {
                 </div>
               </div>
 
-              {/* LOGIKA TLAČIDIEL PODĽA STATUSU */}
               {booking.status === 'COMPLETED' ? (
                 <div className="w-full bg-gray-50 border-2 border-dashed border-gray-200 p-6 rounded-[1.5rem] flex flex-col items-center justify-center text-center">
                   <Check className="w-8 h-8 text-gray-400 mb-2" />
@@ -201,7 +226,6 @@ export default function PartnerDashboard() {
             </div>
           </div>
         ) : (
-          // HLAVNÝ OBSAH (Skenovanie alebo Zoznam)
           <div className="max-w-md mx-auto w-full">
             {activeTab === 'scan' ? (
               <div className="animate-in fade-in duration-500">
@@ -220,9 +244,7 @@ export default function PartnerDashboard() {
             ) : (
               <div className="animate-in fade-in duration-500">
                 <h3 className="text-xl font-black mb-6">Aktívne rezervácie</h3>
-                {isLoadingList ? (
-                  <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
-                ) : activeBookings.length === 0 ? (
+                {activeBookings.length === 0 ? (
                   <div className="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-gray-100 flex flex-col items-center">
                     <Package className="w-12 h-12 text-gray-200 mb-4" />
                     <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">V úschovni nie sú žiadne batožiny</p>
@@ -232,7 +254,7 @@ export default function PartnerDashboard() {
                     {activeBookings.map(b => (
                       <button key={b.id} onClick={() => setBooking(b)} className="w-full bg-white p-6 rounded-3xl shadow-sm border border-gray-50 flex items-center justify-between active:scale-95 transition-all text-left">
                         <div>
-                          <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest inline-block mb-2 ${b.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                          <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest inline-block mb-2 ${b.status === 'PENDING' ? 'bg-orange-100 text-orange-700 animate-pulse' : 'bg-green-100 text-green-700'}`}>
                             {b.status === 'PENDING' ? 'Na príchod' : 'V úschovni'}
                           </div>
                           <h4 className="font-black text-black">{b.userName}</h4>
@@ -249,7 +271,7 @@ export default function PartnerDashboard() {
         )}
       </div>
 
-      {/* SPODNÁ NAVIGÁCIA */}
+      {/* SPODNÁ NAVIGÁCIA so živými číslami */}
       <div className="absolute bottom-0 w-full bg-white border-t border-gray-100 p-4 pb-8 flex gap-4 shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
         <button 
           onClick={() => { setBooking(null); setActiveTab('scan'); }} 
@@ -264,7 +286,7 @@ export default function PartnerDashboard() {
         >
           <div className="relative">
             <List className="w-6 h-6" />
-            {activeBookings.length > 0 && <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-black ${activeTab === 'list' ? 'bg-blue-500 text-white' : 'bg-black text-white'}`}>{activeBookings.length}</span>}
+            {activeBookings.length > 0 && <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-black ${activeTab === 'list' ? 'bg-blue-500 text-white' : 'bg-red-500 text-white animate-bounce'}`}>{activeBookings.length}</span>}
           </div>
           <span className="text-[10px] font-black uppercase tracking-widest">Aktívne</span>
         </button>

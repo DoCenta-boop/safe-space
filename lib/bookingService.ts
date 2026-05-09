@@ -275,3 +275,30 @@ export async function toggleLocationActive(id: string, currentStatus: boolean) {
       return { success: false, error };
     }
   }
+  // --- LIVE FUNKCIA NA AKTÍVNE REZERVÁCIE (BEZ REFRESHU) ---
+import { onSnapshot } from 'firebase/firestore'; // Pridaj onSnapshot do importov úplne hore, ak tam nie je!
+
+export function listenToActiveBookings(locationId: string, callback: (bookings: any[]) => void) {
+  const q = query(
+    collection(db, "bookings"),
+    where("locationId", "==", locationId),
+    where("status", "in", ["PENDING", "STORED"])
+  );
+
+  // Vytvoríme aktívny "poslucháč" na zmeny v databáze.
+  // Akonáhle sa niečo zmení (pridá nová, zmení status, zmaže), zavolá sa táto funkcia.
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const activeBookings: any[] = [];
+    querySnapshot.forEach((doc) => {
+      activeBookings.push({ id: doc.id, ...doc.data() });
+    });
+    // Zoradíme podľa dátumu - najnovšie hore
+    activeBookings.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
+    callback(activeBookings);
+  }, (error) => {
+    console.error("Chyba pri živom spojení:", error);
+  });
+
+  // Vrátime funkciu na zrušenie poslucháča (keď sa komponent odpojí)
+  return unsubscribe;
+}

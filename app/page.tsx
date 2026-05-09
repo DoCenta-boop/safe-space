@@ -70,6 +70,7 @@ export default function Home() {
           items: selectedItems,
           totalPrice: totalPrice,
           locationId: selectedLocation.id,
+          bookingDays: bookingDays, // Pridali sme ukladanie dní do databázy
         },
         capturedImages 
       );
@@ -89,7 +90,6 @@ export default function Home() {
   };
 
   // --- VÝPOČET ZHRNUTIA BATOŽINY ---
-  // Toto zoskupí vybrané položky a vytvorí textový reťazec, napr. "1x Malá batožina, 2x Veľká batožina"
   const luggageSummary = Object.entries(
     selectedItems.reduce((acc, item) => {
       acc[item.label] = (acc[item.label] || 0) + 1;
@@ -180,16 +180,35 @@ export default function Home() {
           </div>
         )}
 
+        {/* --- KROK 5: FINÁLNY SUMÁR --- */}
         {step === 5 && (
           <div className="animate-in fade-in flex flex-col items-center text-center">
             <h2 className="text-3xl font-black mb-2 text-black tracking-tight">Skoro hotovo!</h2>
             <p className="text-gray-500 mb-8 font-bold text-sm">Skontrolujte údaje a potvrďte rezerváciu.</p>
             
             <div className="bg-gray-50 p-6 rounded-[2rem] w-full mb-8 text-left border-2 border-gray-100 shadow-inner">
-              <div className="flex justify-between mb-4"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span><span className="font-black text-black text-right">{selectedLocation?.name}</span></div>
-              {/* TU UKAZUJEME ROZPIS BATOŽINY NAMIESTO IBA KUSOV */}
-              <div className="flex justify-between mb-4"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span><span className="font-black text-black text-right">{luggageSummary}</span></div>
-              <div className="flex justify-between pt-5 border-t-2 border-gray-100 mt-2"><span className="text-black font-black uppercase text-[10px] tracking-widest">Celkom</span><span className="font-black text-3xl text-black">{totalPrice} €</span></div>
+              <div className="flex justify-between mb-4">
+                <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span>
+                <span className="font-black text-black text-right">{selectedLocation?.name}</span>
+              </div>
+              
+              <div className="flex justify-between mb-4">
+                <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span>
+                <span className="font-black text-black text-right">{luggageSummary}</span>
+              </div>
+              
+              {/* NOVÝ RIADOK: DOBA ÚSCHOVY */}
+              <div className="flex justify-between mb-4">
+                <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Doba úschovy</span>
+                <span className="font-black text-black text-right">
+                  {bookingDays} {bookingDays === 1 ? 'deň' : bookingDays < 5 ? 'dni' : 'dní'}
+                </span>
+              </div>
+
+              <div className="flex justify-between pt-5 border-t-2 border-gray-100 mt-2">
+                <span className="text-black font-black uppercase text-[10px] tracking-widest">Celkom</span>
+                <span className="font-black text-3xl text-black">{totalPrice} €</span>
+              </div>
             </div>
 
             <button 
@@ -206,10 +225,17 @@ export default function Home() {
           </div>
         )}
 
+        {/* --- KROK 6: LÍSTOK --- */}
         {step === 6 && bookingId && (
           <div className="animate-in fade-in">
-            {/* POSIELAME ROZPIS BATOŽINY DO LÍSTKA */}
-            <ReservationTicket bookingId={bookingId} userName={userData.name} size={luggageSummary} userEmail={userData.email} />
+            {/* ODOVDZDÁVAME days DO LÍSTKA */}
+            <ReservationTicket 
+              bookingId={bookingId} 
+              userName={userData.name} 
+              size={luggageSummary} 
+              userEmail={userData.email}
+              days={bookingDays} 
+            />
             <button onClick={() => window.location.reload()} className="w-full mt-8 py-5 bg-gray-50 font-black rounded-2xl text-gray-400 active:text-black transition-all uppercase tracking-[0.2em] text-[10px]">Späť na mapu</button>
           </div>
         )}
