@@ -6,19 +6,16 @@ import { useParams } from 'next/navigation';
 import QRScanner from '../../../components/QRScanner';
 import { getBookingByCode, updateBookingStatus, getLocationBySlug, listenToActiveBookings } from '../../../lib/bookingService';
 
-// --- ŽIVÝ ČASOVAČ (Odpočet až po prevzatí personálom) ---
 const BookingTimer = ({ status, createdAt, storedAt, bookingDays }: { status: string, createdAt: any, storedAt?: any, bookingDays: number }) => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [statusStyle, setStatusStyle] = useState('text-gray-500 bg-gray-100 border-gray-200');
 
   useEffect(() => {
-    // Ak ešte batožina nebola fyzicky prevzatá
     if (status === 'PENDING') {
       setStatusStyle('text-orange-700 bg-orange-100 border-orange-200');
       return;
     }
 
-    // Berieme čas prevzatia (storedAt). Pre staršie rezervácie použijeme createdAt ako záchranu
     const startTimestamp = storedAt || createdAt;
     if (!startTimestamp) return;
 
@@ -50,7 +47,6 @@ const BookingTimer = ({ status, createdAt, storedAt, bookingDays }: { status: st
     return () => clearInterval(interval);
   }, [status, storedAt, createdAt, bookingDays]);
 
-  // Vizuál, keď je rezervácia len vytvorená, ale neprevzatá
   if (status === 'PENDING') {
     return (
       <div className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border flex items-center gap-1 w-max transition-colors text-orange-700 bg-orange-100 border-orange-200">
@@ -88,12 +84,10 @@ export default function PartnerDashboard() {
   const [location, setLocation] = useState<any | null>(null);
   const [isLoadingInit, setIsLoadingInit] = useState(true);
   
-  // Prihlasovanie & Relácia
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Stavy aplikácie
   const [activeTab, setActiveTab] = useState<'scan' | 'list'>('scan');
   const [activeBookings, setActiveBookings] = useState<any[]>([]);
 
@@ -102,7 +96,6 @@ export default function PartnerDashboard() {
   const [booking, setBooking] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Inicializácia podniku a kontrola existujúceho prihlásenia
   useEffect(() => {
     async function init() {
       if (!slug) return;
@@ -129,19 +122,14 @@ export default function PartnerDashboard() {
     init();
   }, [slug]);
 
-  // Nastavenie živého počúvania databázy
   useEffect(() => {
     let unsubscribe: () => void;
-
     if (isAuthenticated && location) {
       unsubscribe = listenToActiveBookings(location.id, (liveData) => {
         setActiveBookings(liveData);
       });
     }
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    return () => { if (unsubscribe) unsubscribe(); };
   }, [isAuthenticated, location]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -149,10 +137,7 @@ export default function PartnerDashboard() {
     if (pinInput === location?.pin) {
       setIsAuthenticated(true);
       setLoginError('');
-      localStorage.setItem(`auth_${slug}`, JSON.stringify({
-        pin: pinInput,
-        timestamp: new Date().getTime()
-      }));
+      localStorage.setItem(`auth_${slug}`, JSON.stringify({ pin: pinInput, timestamp: new Date().getTime() }));
     } else {
       setLoginError('Nesprávny PIN kód');
       setPinInput('');
@@ -188,14 +173,12 @@ export default function PartnerDashboard() {
     setIsLoading(true);
     const newStatus = booking.status === 'PENDING' ? 'STORED' : 'COMPLETED';
     
-    // Zapíšeme zmenu do databázy
     const result = await updateBookingStatus(booking.id, newStatus);
     setIsLoading(false);
 
     if (result.success) {
       if (newStatus === 'STORED') {
         alert('Batožina bola úspešne prevzatá! Časovač je spustený.');
-        // Lokálne updatneme stav, aby sme nečakali na live sync
         setBooking({ ...booking, status: 'STORED', storedAt: { seconds: Math.floor(Date.now() / 1000) } });
       } else {
         alert('Batožina bola odovzdaná!');
@@ -211,15 +194,26 @@ export default function PartnerDashboard() {
   if (!isAuthenticated) {
     return (
       <main className="min-h-[100dvh] bg-gray-50 flex flex-col items-center justify-center p-6 font-sans">
-        <div className="w-full max-w-md bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center">
-          <KeyRound className="w-12 h-12 text-blue-600 mx-auto mb-6" />
-          <h1 className="text-2xl font-black text-black mb-2">{location.name}</h1>
-          <p className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest">Partnerský prístup</p>
-          <form onSubmit={handleLogin}>
+        <div className="w-full max-w-md bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center flex flex-col items-center">
+          {/* BRANDING LOGO NA PRIHLÁSENÍ */}
+          <div className="mb-8 flex items-center justify-center">
+            <span className="text-3xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
+            <span className="text-3xl font-black text-blue-600 tracking-tighter ml-1.5">SPACES</span>
+          </div>
+
+          <h1 className="text-xl font-bold text-gray-700 mb-1">{location.name}</h1>
+          <p className="text-xs font-bold text-gray-400 mb-8 uppercase tracking-widest">Partnerský prístup</p>
+          
+          <form onSubmit={handleLogin} className="w-full">
             <input type="password" inputMode="numeric" maxLength={6} value={pinInput} onChange={(e) => setPinInput(e.target.value)} placeholder="••••••" className="w-full text-center text-4xl tracking-[0.5em] font-mono font-black py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl mb-4 outline-none focus:border-black" />
             {loginError && <p className="text-red-500 font-bold text-xs mb-4 uppercase">{loginError}</p>}
             <button type="submit" disabled={pinInput.length !== 6} className="w-full bg-black text-white font-black py-5 rounded-2xl active:scale-95 transition-all shadow-xl disabled:opacity-30">Vstúpiť</button>
           </form>
+        </div>
+
+        {/* PÄTIČKA */}
+        <div className="absolute bottom-6 w-full text-center">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Powered by Docenta</p>
         </div>
       </main>
     );
@@ -232,15 +226,20 @@ export default function PartnerDashboard() {
       
       <header className="p-6 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-xl font-black text-black tracking-tight">{location.name}</h1>
-          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-1">
+          {/* BRANDING LOGO V HLAVIČKE */}
+          <div className="mb-1 flex items-center">
+            <span className="text-xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
+            <span className="text-xl font-black text-blue-600 tracking-tighter ml-1">SPACES</span>
+          </div>
+          <h1 className="text-lg font-bold text-gray-700 tracking-tight">{location.name}</h1>
+          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-1 mt-1">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Pripojené online
           </p>
         </div>
         <button onClick={handleLogout} className="text-gray-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-colors">Odhlásiť</button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 pb-32">
+      <div className="flex-1 overflow-y-auto p-6 pb-32 flex flex-col">
         {booking ? (
           <div className="animate-in slide-in-from-bottom-8 duration-300 max-w-md mx-auto w-full">
             <div className="bg-white rounded-[2.5rem] p-8 shadow-xl mb-6 border border-gray-100 mt-4">
@@ -354,7 +353,6 @@ export default function PartnerDashboard() {
                           <div className="bg-gray-50 p-3 rounded-2xl group-hover:bg-black group-hover:text-white transition-colors"><ArrowRight className="w-5 h-5" /></div>
                         </div>
 
-                        {/* ČASOVAČ V ZOZNAME */}
                         <div className="pt-3 border-t border-gray-100 w-full flex justify-between items-center">
                           <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Časový limit</span>
                           <BookingTimer 
@@ -364,13 +362,19 @@ export default function PartnerDashboard() {
                             bookingDays={b.bookingDays || 1} 
                           />
                         </div>
-
                       </button>
                     ))}
                   </div>
                 )}
               </div>
             )}
+          </div>
+        )}
+        
+        {/* PÄTIČKA (v scrolovacej zóne) */}
+        {!booking && (
+          <div className="mt-auto pt-10 pb-4 w-full text-center">
+            <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Powered by Docenta</p>
           </div>
         )}
       </div>

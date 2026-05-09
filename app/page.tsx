@@ -121,140 +121,139 @@ export default function Home() {
         })}
       </div>
 
-      <div className="absolute bottom-0 w-full max-h-[90dvh] overflow-y-auto bg-white p-6 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.1)] pb-10 transition-all duration-300">
+      <div className="absolute bottom-0 w-full max-h-[90dvh] overflow-y-auto bg-white p-6 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col">
         <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8 shrink-0"></div>
         
-        {step === 0 && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="text-3xl font-black mb-2 text-black tracking-tight">Kam s batožinou?</h2>
-            <p className="text-gray-500 mb-8 font-bold">Vyberte si miesto na mape a bezpečne si odložte veci.</p>
-            
-            <button 
-              onClick={() => setStep(1)} 
-              disabled={isLoadingLocations || locations.length === 0}
-              className="w-full bg-black text-white font-black text-lg py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform shadow-xl shadow-black/10 disabled:bg-gray-400"
-            >
-              {isLoadingLocations ? (
-                <><Loader2 className="w-6 h-6 animate-spin" /> Načítavam...</>
-              ) : locations.length === 0 ? (
-                "Momentálne nemáme voľné podniky"
-              ) : (
-                <><Plus className="w-7 h-7" /> Nová rezervácia</>
-              )}
-            </button>
-          </div>
-        )}
-
-        {step > 0 && step < 6 && (
-          <button onClick={() => setStep(step - 1)} className="flex items-center gap-2 text-gray-400 mb-6 hover:text-black transition-colors font-black uppercase text-[10px] tracking-[0.2em]">
-            <ArrowLeft className="w-4 h-4" /> Späť
-          </button>
-        )}
-
-        {step === 1 && <div className="animate-in fade-in"><LocationSelector locations={locations} onSelect={handleLocationSelect} /></div>}
-        {step === 2 && selectedLocation && <div className="animate-in fade-in"><SizeSelector location={selectedLocation} onNext={handleSizeSelection} /></div>}
-        
-        {step === 3 && (
-          <div className="animate-in fade-in">
-            <UserDetailsForm 
-              onNext={(data) => { 
-                setUserData(data); 
-                setCapturedImages([]); 
-                setCurrentPhotoIndex(0); 
-                setStep(4); 
-              }} 
-              onBack={() => setStep(2)}
-            />
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="animate-in fade-in">
-            <CameraCapture 
-              key={`cam-${currentPhotoIndex}`} 
-              title={`Odfotografuj: ${selectedItems[currentPhotoIndex].label}`} 
-              onCapture={handlePhotoCaptured} 
-              onCancel={() => setStep(3)} 
-            />
-          </div>
-        )}
-
-        {/* --- KROK 5: FINÁLNY SUMÁR PRED POTVRDENÍM --- */}
-        {step === 5 && (
-          <div className="animate-in fade-in flex flex-col items-center text-center">
-            <h2 className="text-3xl font-black mb-2 text-black tracking-tight">Skoro hotovo!</h2>
-            <p className="text-gray-500 mb-8 font-bold text-sm">Skontrolujte si prosím svoje údaje.</p>
-            
-            <div className="bg-gray-50 p-6 rounded-[2rem] w-full mb-8 text-left border-2 border-gray-100 shadow-inner">
-              
-              {/* Osobné údaje */}
-              <div className="mb-4 pb-4 border-b border-gray-200">
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Meno</span>
-                  <span className="font-black text-black text-right">{userData.name}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Telefón</span>
-                  <span className="font-black text-black text-right">{userData.phone || '-'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">E-mail</span>
-                  <span className="font-black text-black text-right truncate pl-4">{userData.email || '-'}</span>
-                </div>
-              </div>
-
-              {/* Údaje o rezervácii */}
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span>
-                <span className="font-black text-black text-right">{selectedLocation?.name}</span>
+        <div className="flex-1">
+          {step === 0 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+              {/* BRANDING LOGO */}
+              <div className="mb-6 flex items-center">
+                <span className="text-4xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
+                <span className="text-4xl font-black text-blue-600 tracking-tighter ml-1.5">SPACES</span>
               </div>
               
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span>
-                <span className="font-black text-black text-right">{luggageSummary}</span>
-              </div>
+              <h2 className="text-3xl font-black mb-2 text-black tracking-tight">Kam s batožinou?</h2>
+              <p className="text-gray-500 mb-8 font-bold">Vyberte si miesto na mape a bezpečne si odložte veci.</p>
               
-              <div className="flex justify-between mb-4">
-                <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Doba úschovy</span>
-                <span className="font-black text-black text-right">
-                  {bookingDays} {bookingDays === 1 ? 'deň' : bookingDays < 5 ? 'dni' : 'dní'}
-                </span>
-              </div>
-
-              <div className="flex justify-between pt-5 border-t-2 border-gray-100 mt-2">
-                <span className="text-black font-black uppercase text-[10px] tracking-widest">Celkom</span>
-                <span className="font-black text-3xl text-black">{totalPrice} €</span>
-              </div>
+              <button 
+                onClick={() => setStep(1)} 
+                disabled={isLoadingLocations || locations.length === 0}
+                className="w-full bg-black text-white font-black text-lg py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform shadow-xl shadow-black/10 disabled:bg-gray-400"
+              >
+                {isLoadingLocations ? (
+                  <><Loader2 className="w-6 h-6 animate-spin" /> Načítavam...</>
+                ) : locations.length === 0 ? (
+                  "Momentálne nemáme voľné podniky"
+                ) : (
+                  <><Plus className="w-7 h-7" /> Nová rezervácia</>
+                )}
+              </button>
             </div>
+          )}
 
-            <button 
-              onClick={handlePaymentAndBooking} 
-              disabled={isSubmitting}
-              className="w-full bg-black text-white font-black text-lg py-6 rounded-2xl active:scale-95 transition-transform flex items-center justify-center gap-3 disabled:bg-gray-400 shadow-2xl shadow-black/20"
-            >
-              {isSubmitting ? (
-                <><Loader2 className="w-7 h-7 animate-spin" /> Ukladám...</>
-              ) : (
-                "Potvrdiť rezerváciu"
-              )}
+          {step > 0 && step < 6 && (
+            <button onClick={() => setStep(step - 1)} className="flex items-center gap-2 text-gray-400 mb-6 hover:text-black transition-colors font-black uppercase text-[10px] tracking-[0.2em]">
+              <ArrowLeft className="w-4 h-4" /> Späť
             </button>
-          </div>
-        )}
+          )}
 
-        {/* --- KROK 6: LÍSTOK --- */}
-        {step === 6 && bookingId && (
-          <div className="animate-in fade-in">
-            <ReservationTicket 
-              bookingId={bookingId} 
-              userName={userData.name} 
-              size={luggageSummary} 
-              userEmail={userData.email}
-              userPhone={userData.phone} // <-- TU JE PRIDANÝ TELEFÓN
-              days={bookingDays} 
-            />
-            <button onClick={() => window.location.reload()} className="w-full mt-8 py-5 bg-gray-50 font-black rounded-2xl text-gray-400 active:text-black transition-all uppercase tracking-[0.2em] text-[10px]">Späť na mapu</button>
-          </div>
-        )}
+          {step === 1 && <div className="animate-in fade-in"><LocationSelector locations={locations} onSelect={handleLocationSelect} /></div>}
+          {step === 2 && selectedLocation && <div className="animate-in fade-in"><SizeSelector location={selectedLocation} onNext={handleSizeSelection} /></div>}
+          
+          {step === 3 && (
+            <div className="animate-in fade-in">
+              <UserDetailsForm 
+                onNext={(data) => { 
+                  setUserData(data); 
+                  setCapturedImages([]); 
+                  setCurrentPhotoIndex(0); 
+                  setStep(4); 
+                }} 
+                onBack={() => setStep(2)}
+              />
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="animate-in fade-in">
+              <CameraCapture 
+                key={`cam-${currentPhotoIndex}`} 
+                title={`Odfotografuj: ${selectedItems[currentPhotoIndex].label}`} 
+                onCapture={handlePhotoCaptured} 
+                onCancel={() => setStep(3)} 
+              />
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="animate-in fade-in flex flex-col items-center text-center">
+              <h2 className="text-3xl font-black mb-2 text-black tracking-tight">Skoro hotovo!</h2>
+              <p className="text-gray-500 mb-8 font-bold text-sm">Skontrolujte si prosím svoje údaje.</p>
+              
+              <div className="bg-gray-50 p-6 rounded-[2rem] w-full mb-8 text-left border-2 border-gray-100 shadow-inner">
+                <div className="mb-4 pb-4 border-b border-gray-200">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Meno</span>
+                    <span className="font-black text-black text-right">{userData.name}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Telefón</span>
+                    <span className="font-black text-black text-right">{userData.phone || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">E-mail</span>
+                    <span className="font-black text-black text-right truncate pl-4">{userData.email || '-'}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span>
+                  <span className="font-black text-black text-right">{selectedLocation?.name}</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span>
+                  <span className="font-black text-black text-right">{luggageSummary}</span>
+                </div>
+                <div className="flex justify-between mb-4">
+                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Doba úschovy</span>
+                  <span className="font-black text-black text-right">{bookingDays} {bookingDays === 1 ? 'deň' : bookingDays < 5 ? 'dni' : 'dní'}</span>
+                </div>
+                <div className="flex justify-between pt-5 border-t-2 border-gray-100 mt-2">
+                  <span className="text-black font-black uppercase text-[10px] tracking-widest">Celkom</span>
+                  <span className="font-black text-3xl text-black">{totalPrice} €</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={handlePaymentAndBooking} 
+                disabled={isSubmitting}
+                className="w-full bg-black text-white font-black text-lg py-6 rounded-2xl active:scale-95 transition-transform flex items-center justify-center gap-3 disabled:bg-gray-400 shadow-2xl shadow-black/20"
+              >
+                {isSubmitting ? <><Loader2 className="w-7 h-7 animate-spin" /> Ukladám...</> : "Potvrdiť rezerváciu"}
+              </button>
+            </div>
+          )}
+
+          {step === 6 && bookingId && (
+            <div className="animate-in fade-in">
+              <ReservationTicket 
+                bookingId={bookingId} 
+                userName={userData.name} 
+                size={luggageSummary} 
+                userEmail={userData.email}
+                userPhone={userData.phone}
+                days={bookingDays} 
+              />
+              <button onClick={() => window.location.reload()} className="w-full mt-8 py-5 bg-gray-50 font-black rounded-2xl text-gray-400 active:text-black transition-all uppercase tracking-[0.2em] text-[10px]">Späť na mapu</button>
+            </div>
+          )}
+        </div>
+
+        {/* PÄTIČKA */}
+        <div className="mt-8 pt-4 w-full text-center">
+          <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Powered by Docenta</p>
+        </div>
       </div>
     </main>
   );
