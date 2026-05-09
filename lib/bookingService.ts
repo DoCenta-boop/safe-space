@@ -1,4 +1,4 @@
-import { db, storage } from './firebase'; // Pridaný import 'storage'
+import { db, storage } from './firebase'; 
 import { 
   collection, 
   addDoc, 
@@ -10,7 +10,9 @@ import {
   updateDoc,
   doc 
 } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage'; // Importy pre Storage
+import { ref, uploadString, getDownloadURL } from 'firebase/storage'; 
+
+// --- FUNKCIE PRE REZERVÁCIE ---
 
 export async function createBooking(bookingData: any, capturedImages: {id: string, image: string}[]) {
   try {
@@ -56,7 +58,6 @@ export async function createBooking(bookingData: any, capturedImages: {id: strin
   }
 }
 
-// (Tieto funkcie ostávajú nezmenené)
 export async function getBookingByCode(code: string) {
   try {
     const q = query(
@@ -79,5 +80,48 @@ export async function updateBookingStatus(docId: string, newStatus: string) {
     return { success: true };
   } catch (error) {
     return { success: false };
+  }
+}
+
+// --- FUNKCIE PRE PODNIKY (LOCATIONS) ---
+
+export async function addLocation(locationData: any) {
+  try {
+    // Generovanie 6-miestneho PINu (iba čísla) pre partner login
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const newDoc = {
+      ...locationData,
+      pin: pin,
+      createdAt: serverTimestamp()
+    };
+
+    const docRef = await addDoc(collection(db, "locations"), newDoc);
+    
+    return { 
+      success: true, 
+      id: docRef.id,
+      pin: pin
+    };
+  } catch (error) {
+    console.error("Chyba pri pridávaní podniku:", error);
+    return { success: false, error };
+  }
+}
+
+export async function getLocations() {
+  try {
+    const q = query(collection(db, "locations"));
+    const querySnapshot = await getDocs(q);
+    
+    const locations: any[] = [];
+    querySnapshot.forEach((doc) => {
+      locations.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return { success: true, data: locations };
+  } catch (error) {
+    console.error("Chyba pri načítavaní podnikov:", error);
+    return { success: false, data: [] };
   }
 }
