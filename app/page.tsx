@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { MapPin, ArrowLeft, Briefcase, Luggage, Package, Loader2, Navigation, Plus } from "lucide-react";
+// Pridaný import 'Search' pre ikonku lupy
+import { MapPin, ArrowLeft, Briefcase, Luggage, Package, Loader2, Navigation, Plus, Search } from "lucide-react";
 import LocationSelector, { Location } from "../components/LocationSelector";
 import SizeSelector, { SelectedLuggage } from "../components/SizeSelector";
 import UserDetailsForm from "../components/UserDetailsForm";
@@ -25,6 +26,10 @@ export default function Home() {
   
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locatingError, setLocatingError] = useState(false);
+
+  // NOVÉ: Stavy pre vyhľadávanie a zoradenie
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<'nearest' | 'availability'>('nearest');
 
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedLuggage[]>([]);
@@ -85,13 +90,36 @@ export default function Home() {
 
   const luggageSummary = Object.entries(selectedItems.reduce((acc, item) => { acc[item.label] = (acc[item.label] || 0) + 1; return acc; }, {} as Record<string, number>)).map(([label, count]) => `${count}x ${label}`).join(', ');
 
-  const sortedLocations = [...locations].map(loc => {
-    let distance = null;
-    if (userLocation && loc.lat && loc.lng) {
-      distance = getDistanceFromLatLonInKm(userLocation.lat, userLocation.lng, loc.lat, loc.lng);
-    }
-    return { ...loc, distance };
-  }).sort((a, b) => (a.distance || 9999) - (b.distance || 9999));
+  // KOMBINOVANÉ SPRACOVANIE: Filtrovanie + Výpočty + Zoradenie
+  const finalLocations = [...locations]
+    // 1. Filtrácia naživo (podľa názvu alebo adresy)
+    .filter(loc => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return loc.name.toLowerCase().includes(q) || loc.address.toLowerCase().includes(q);
+    })
+    // 2. Výpočet vzdialenosti a dostupných kapacít
+    .map(loc => {
+      let distance = null;
+      if (userLocation && loc.lat && loc.lng) {
+        distance = getDistanceFromLatLonInKm(userLocation.lat, userLocation.lng, loc.lat, loc.lng);
+      }
+      
+      const sFree = loc.capacities.small.max - loc.capacities.small.occupied;
+      const mFree = loc.capacities.medium.max - loc.capacities.medium.occupied;
+      const lFree = loc.capacities.large.max - loc.capacities.large.occupied;
+      const totalFree = sFree + mFree + lFree;
+      
+      return { ...loc, distance, sFree, mFree, lFree, totalFree };
+    })
+    // 3. Zoradenie (Najbližšie vs. Najviac miesta)
+    .sort((a, b) => {
+      if (sortBy === 'availability') {
+        return b.totalFree - a.totalFree; // Od najviac miest po najmenej
+      } else {
+        return (a.distance || 9999) - (b.distance || 9999); // Od najbližšieho
+      }
+    });
 
   return (
     <main className="min-h-[100dvh] w-full bg-gray-50 flex flex-col font-sans text-black">
@@ -111,26 +139,58 @@ export default function Home() {
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-12 w-full max-w-lg mx-auto">
         
-        {/* KROK 0 */}
+        {/* KROK 0: ZOZNAM PODNIKOV */}
         {step === 0 && (
           <div className="animate-in fade-in w-full">
             <h2 className="text-3xl font-black mb-2 tracking-tight">Kam s batožinou?</h2>
             <p className="text-gray-500 mb-6 font-bold text-sm">Vyberte si z našich overených podnikov a odložte si veci v bezpečí.</p>
             
             {locatingError && <div className="bg-orange-50 text-orange-700 p-4 rounded-2xl text-xs font-bold mb-6 border border-orange-100">Poloha nie je povolená. Podniky sú zoradené náhodne. Pre zobrazenie vzdialeností povoľte GPS.</div>}
+
+            {/* --- PANEL: VYHĽADÁVANIE A ZORADENIE --- */}
+            {!isLoadingLocations && locations.length > 0 && (
+              <div className="mb-8 space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="block w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-100 rounded-[1.5rem] text-sm md:text-base font-bold text-black placeholder-gray-400 focus:outline-none focus:border-black transition-colors shadow-sm"
+                    placeholder="Hľadať názov alebo adresu..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                {/* Sort Buttons */}
+                <div className="flex gap-3 w-full">
+                  <button
+                    onClick={() => setSortBy('nearest')}
+                    className={`flex-1 py-3.5 px-4 rounded-[1.2rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${sortBy === 'nearest' ? 'bg-black text-white shadow-lg shadow-black/20' : 'bg-white text-gray-400 border-2 border-gray-100 hover:text-black hover:border-black'}`}
+                  >
+                    <MapPin className="w-4 h-4" /> Najbližšie
+                  </button>
+                  <button
+                    onClick={() => setSortBy('availability')}
+                    className={`flex-1 py-3.5 px-4 rounded-[1.2rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${sortBy === 'availability' ? 'bg-black text-white shadow-lg shadow-black/20' : 'bg-white text-gray-400 border-2 border-gray-100 hover:text-black hover:border-black'}`}
+                  >
+                    <Package className="w-4 h-4" /> Voľné miesto
+                  </button>
+                </div>
+              </div>
+            )}
             
             {isLoadingLocations ? (
               <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-gray-400"/></div>
-            ) : locations.length === 0 ? (
-              <div className="text-center py-10 font-bold text-gray-400">Momentálne nemáme voľné podniky.</div>
+            ) : finalLocations.length === 0 ? (
+              <div className="text-center py-10 font-bold text-gray-400 bg-white border-2 border-dashed border-gray-200 rounded-[2rem]">
+                <p>Nenašli sa žiadne podniky.</p>
+              </div>
             ) : (
               <div className="space-y-6">
-                {sortedLocations.map(loc => {
-                  const sFree = loc.capacities.small.max - loc.capacities.small.occupied;
-                  const mFree = loc.capacities.medium.max - loc.capacities.medium.occupied;
-                  const lFree = loc.capacities.large.max - loc.capacities.large.occupied;
-                  const totalFree = sFree + mFree + lFree;
-
+                {finalLocations.map(loc => {
                   return (
                     <div key={loc.id} className="bg-white p-5 rounded-[2rem] shadow-xl border border-gray-100 flex flex-col overflow-hidden w-full">
                       <div className="flex justify-between items-start mb-4 gap-2">
@@ -161,13 +221,13 @@ export default function Home() {
                       )}
 
                       <div className="grid grid-cols-3 gap-2 mb-6">
-                        <div className="flex flex-col items-center bg-gray-50 p-2 rounded-xl"><span className="text-[10px] font-black uppercase text-gray-400 mb-1">Malá</span><span className={`font-black text-sm ${sFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{sFree}</span></div>
-                        <div className="flex flex-col items-center bg-gray-50 p-2 rounded-xl"><span className="text-[10px] font-black uppercase text-gray-400 mb-1">Stredná</span><span className={`font-black text-sm ${mFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{mFree}</span></div>
-                        <div className="flex flex-col items-center bg-gray-50 p-2 rounded-xl"><span className="text-[10px] font-black uppercase text-gray-400 mb-1">Veľká</span><span className={`font-black text-sm ${lFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{lFree}</span></div>
+                        <div className="flex flex-col items-center bg-gray-50 p-2 rounded-xl"><span className="text-[10px] font-black uppercase text-gray-400 mb-1">Malá</span><span className={`font-black text-sm ${loc.sFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{loc.sFree}</span></div>
+                        <div className="flex flex-col items-center bg-gray-50 p-2 rounded-xl"><span className="text-[10px] font-black uppercase text-gray-400 mb-1">Stredná</span><span className={`font-black text-sm ${loc.mFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{loc.mFree}</span></div>
+                        <div className="flex flex-col items-center bg-gray-50 p-2 rounded-xl"><span className="text-[10px] font-black uppercase text-gray-400 mb-1">Veľká</span><span className={`font-black text-sm ${loc.lFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{loc.lFree}</span></div>
                       </div>
 
                       <div className="mt-auto">
-                        <button onClick={() => handleLocationSelect(loc)} disabled={totalFree === 0} className="w-full bg-black text-white font-black py-4 md:py-5 rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 shadow-xl shadow-black/20">
+                        <button onClick={() => handleLocationSelect(loc)} disabled={loc.totalFree === 0} className="w-full bg-black text-white font-black py-4 md:py-5 rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 shadow-xl shadow-black/20">
                           Zvoliť toto miesto
                         </button>
                       </div>
