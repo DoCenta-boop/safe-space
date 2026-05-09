@@ -11,7 +11,7 @@ import { createBooking, getLocations } from "../lib/bookingService";
 
 export default function Home() {
   const [step, setStep] = useState(0); 
-  const [locations, setLocations] = useState<Location[]>([]); // Skladujeme podniky z DB
+  const [locations, setLocations] = useState<Location[]>([]); 
   const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedLuggage[]>([]);
@@ -28,7 +28,9 @@ export default function Home() {
     async function loadData() {
       const result = await getLocations();
       if (result.success && result.data) {
-        setLocations(result.data as Location[]);
+        // FILTRUJEME: Zobrazíme iba tie, ktoré nie sú pozastavené
+        const activeLocations = (result.data as any[]).filter(loc => loc.isActive !== false);
+        setLocations(activeLocations);
       }
       setIsLoadingLocations(false);
     }
@@ -71,7 +73,7 @@ export default function Home() {
           totalPrice: totalPrice,
           locationId: selectedLocation.id,
         },
-        capturedImages // Posielame fotky do storage
+        capturedImages 
       );
 
       if (result.success && result.bookingId) {
@@ -94,7 +96,7 @@ export default function Home() {
       <div className="flex-1 relative bg-[#e5e3df] overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #ffffff 2px, transparent 2px)', backgroundSize: '40px 40px' }}></div>
         
-        {/* Ak sa podniky načítavajú, neukážeme nič. Inak vykreslíme mapu. */}
+        {/* Vykreslíme iba aktívne podniky. */}
         {!isLoadingLocations && locations.map((loc) => {
           const sFree = loc.capacities.small.max - loc.capacities.small.occupied;
           const mFree = loc.capacities.medium.max - loc.capacities.medium.occupied;
@@ -132,7 +134,7 @@ export default function Home() {
               {isLoadingLocations ? (
                 <><Loader2 className="w-6 h-6 animate-spin" /> Načítavam...</>
               ) : locations.length === 0 ? (
-                "Žiadne dostupné podniky"
+                "Momentálne nemáme voľné podniky"
               ) : (
                 <><Plus className="w-7 h-7" /> Nová rezervácia</>
               )}
