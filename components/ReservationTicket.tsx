@@ -17,23 +17,29 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
   const ticketRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Funkcia na vygenerovanie PDF (robustnejšia pre mobily)
+  // Funkcia na vygenerovanie PDF s detailným chytaním chýb
   const generatePDF = async () => {
-    if (!ticketRef.current) return null;
+    if (!ticketRef.current) {
+      alert("Chyba: Lístok sa nenašiel na obrazovke.");
+      return null;
+    }
     
     try {
-      // Krátke zdržanie, aby sa v mobile stihli plne vyrenderovať fonty a QR kód
+      // 1. Zdržanie pre istotu (načítanie fontov a QR kódu v mobiloch)
       await new Promise(resolve => setTimeout(resolve, 500));
 
+      // 2. Vytvorenie obrázku z HTML
       const canvas = await html2canvas(ticketRef.current, {
         scale: 2, 
         useCORS: true,
         backgroundColor: '#ffffff',
-        logging: false,
+        logging: true, // Zapneme logovanie pre prípadné chyby
         allowTaint: true
       });
       
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      
+      // 3. Vloženie do PDF
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -44,10 +50,11 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, 'JPEG', 0, 10, pdfWidth, pdfHeight);
+      
       return pdf;
-    } catch (error) {
-      console.error("Chyba pri generovaní PDF:", error);
-      alert("Nepodarilo sa vytvoriť PDF dokument. Skúste to prosím znova.");
+    } catch (error: any) {
+      console.error("Kompletná chyba generovania:", error);
+      alert(`Nepodarilo sa vytvoriť PDF.\nDôvod: ${error.message || "Neznáma chyba"}`);
       return null;
     }
   };
@@ -92,8 +99,12 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       } else {
         alert("Vaše zariadenie bohužiaľ nepodporuje priame zdieľanie.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log("Zdieľanie zrušené používateľom alebo zlyhalo.", error);
+      // Pridaný alert aj pre chybu pri zdieľaní, aby sme to vedeli odchytiť
+      if (error.name !== 'AbortError') {
+        alert(`Chyba pri zdieľaní: ${error.message || "Neznáma chyba"}`);
+      }
     }
     
     setIsGenerating(false);
