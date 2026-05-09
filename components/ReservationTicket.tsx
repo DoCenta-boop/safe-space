@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { Download, Share2, CheckCircle2, Loader2, Ticket } from 'lucide-react';
-// ZMENA: Používame QRCodeCanvas namiesto QRCodeSVG pre 100% spoľahlivosť pri exporte
 import { QRCodeCanvas } from 'qrcode.react';
 import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
@@ -24,14 +23,13 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
     if (!pdfRef.current) return null;
     
     try {
-      // Mierne dlhší čas na načítanie, aby Canvas s QR kódom stihol nabehnúť
       await new Promise(resolve => setTimeout(resolve, 800));
 
       const node = pdfRef.current;
 
       const imgData = await toJpeg(node, {
         quality: 1.0,
-        pixelRatio: 2, // 2x rozlíšenie pre absolútnu ostrosť textu
+        pixelRatio: 2, 
         backgroundColor: '#ffffff',
         width: 794,  
         height: 1123 
@@ -73,14 +71,14 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
-          title: 'Moja rezervácia Safe Space',
-          text: `Ahoj, tu je môj lístok do Safe Space. Kód: ${bookingId}`,
+          title: 'Moja rezervácia Docenta SPACES',
+          text: `Ahoj, tu je môj lístok do Docenta SPACES. Kód: ${bookingId}`,
           files: [file]
         });
       } else if (navigator.share) {
         await navigator.share({
-          title: 'Moja rezervácia Safe Space',
-          text: `Safe Space kód: ${bookingId}\nMeno: ${userName}\nBatožina: ${size}\nDni: ${days}`,
+          title: 'Moja rezervácia Docenta SPACES',
+          text: `Docenta SPACES kód: ${bookingId}\nMeno: ${userName}\nBatožina: ${size}\nDni: ${days}`,
           url: window.location.origin
         });
       } else {
@@ -101,71 +99,71 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
     <div className="w-full flex flex-col items-center relative">
       
       {/* -------------------------------------------------------------
-        SKRYTÝ WRAPPER: Obalíme A4 šablónu do neviditeľného rodiča (0x0 overflow hidden).
-        Samotný pdfRef (A4 šablóna) už nemá divoké mínusové súradnice, 
-        vďaka čomu ho prehliadač nezabije a bezpečne ho vykreslí do pamäte.
+        SKRYTÁ A4 ŠABLÓNA PRE PDF GENERÁTOR (Vysoko elegantný a čistý dizajn)
         -------------------------------------------------------------
       */}
       <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', top: 0, left: 0, pointerEvents: 'none' }}>
         <div 
           ref={pdfRef} 
           className="bg-white" 
-          style={{ width: '794px', height: '1123px', padding: '60px', color: '#000' }}
+          style={{ width: '794px', height: '1123px', padding: '70px', color: '#000' }}
         >
-          <div className="border-b-4 border-black pb-6 mb-12 flex justify-between items-end">
-            {/* PRIDANÉ LOGO DOCENTA SPACES */}
+          {/* Hlavička */}
+          <div className="border-b border-gray-200 pb-8 mb-12 flex justify-between items-end">
             <div className="flex items-center">
-              <span className="text-5xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
-              <span className="text-5xl font-black text-blue-600 tracking-tighter ml-1.5">SPACES</span>
+              <span className="text-4xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
+              <span className="text-4xl font-black text-blue-600 tracking-tighter ml-1.5">SPACES</span>
             </div>
-            <p className="text-2xl font-bold text-gray-500 uppercase tracking-widest">Rezervačný lístok</p>
+            <p className="text-base font-bold text-gray-400 uppercase tracking-[0.15em]">Rezervačný lístok</p>
           </div>
 
+          {/* QR kód a ID */}
           <div className="flex justify-between items-center mb-16">
             <div className="w-1/2">
-              <p className="text-xl font-black text-gray-400 uppercase tracking-widest mb-4">Váš tajný kód</p>
-              <h2 className="text-7xl font-black font-mono tracking-widest mb-4">{bookingId}</h2>
-              <p className="text-lg font-bold text-gray-500">Tento kód a QR kód ukážte personálu pri odovzdaní aj vyzdvihnutí batožiny.</p>
+              <p className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Váš tajný kód</p>
+              <h2 className="text-6xl font-black font-mono tracking-widest text-black mb-4">{bookingId}</h2>
+              <p className="text-base font-medium text-gray-500 leading-relaxed max-w-sm">Tento kód a QR kód ukážte personálu pri odovzdaní aj vyzdvihnutí batožiny.</p>
             </div>
-            <div className="bg-white p-6 border-4 border-black rounded-3xl">
-              {/* CANVAS QR KÓD pre bezchybný export */}
-              <QRCodeCanvas value={bookingId} size={250} level="H" />
+            <div className="bg-white p-4 border border-gray-100 rounded-3xl shadow-sm">
+              <QRCodeCanvas value={bookingId} size={200} level="H" />
             </div>
           </div>
 
-          <div className="w-full bg-gray-50 rounded-3xl p-10 border-2 border-gray-200">
-            <h3 className="text-3xl font-black uppercase tracking-widest border-b-2 border-gray-200 pb-6 mb-8">Detaily rezervácie</h3>
+          {/* Tabuľka detailov */}
+          <div className="w-full bg-gray-50 rounded-3xl p-10 border border-gray-100">
+            <h3 className="text-lg font-black uppercase tracking-[0.15em] border-b border-gray-200 pb-4 mb-6 text-black">Detaily rezervácie</h3>
             
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div className="flex justify-between items-center">
-                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Zákazník</span>
-                <span className="text-2xl font-black">{userName}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Telefón</span>
-                <span className="text-2xl font-black">{userPhone || 'Neuvedený'}</span>
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Zákazník</span>
+                <span className="text-xl font-black text-black">{userName}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">E-mail</span>
-                <span className="text-2xl font-black">{userEmail || 'Neuvedený'}</span>
-              </div>
-              <div className="flex justify-between items-center pt-6 border-t-2 border-gray-200">
-                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Batožina</span>
-                <span className="text-2xl font-black">{size}</span>
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Telefón</span>
+                <span className="text-xl font-black text-black">{userPhone || 'Neuvedený'}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Doba úschovy</span>
-                <span className="text-2xl font-black">{days} {days === 1 ? 'deň' : days < 5 ? 'dni' : 'dní'}</span>
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">E-mail</span>
+                <span className="text-xl font-black text-black">{userEmail || 'Neuvedený'}</span>
               </div>
-              <div className="flex justify-between items-center pt-6 border-t-2 border-gray-200">
-                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Dátum vytvorenia</span>
-                <span className="text-2xl font-black">{formatDate()}</span>
+              <div className="flex justify-between items-center pt-5 border-t border-gray-200">
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Batožina</span>
+                <span className="text-xl font-black text-black">{size}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Doba úschovy</span>
+                <span className="text-xl font-black text-black">{days} {days === 1 ? 'deň' : days < 5 ? 'dni' : 'dní'}</span>
+              </div>
+              <div className="flex justify-between items-center pt-5 border-t border-gray-200">
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Dátum vytvorenia</span>
+                <span className="text-xl font-black text-black">{formatDate()}</span>
               </div>
             </div>
           </div>
 
-          <div className="absolute bottom-16 left-0 w-full text-center">
-            <p className="text-gray-400 font-bold text-xl uppercase tracking-widest">Ďakujeme, že využívate sieť úschovní Safe Space.</p>
+          {/* Pätička dokumentu */}
+          <div className="absolute bottom-12 left-0 w-full text-center">
+            <p className="text-gray-400 font-bold text-xs uppercase tracking-[0.2em]">Ďakujeme, že využívate sieť úschovní Docenta SPACES.</p>
           </div>
         </div>
       </div>
@@ -185,7 +183,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
         <div className="absolute top-0 left-0 w-full h-3 bg-black"></div>
         <div className="flex items-center gap-2 mb-8 mt-2">
           <Ticket className="w-6 h-6 text-black" />
-          <span className="font-black tracking-widest uppercase text-xs">Safe Space</span>
+          <span className="font-black tracking-widest uppercase text-xs">Docenta SPACES</span>
         </div>
 
         <div className="flex justify-center mb-6 bg-white p-4 rounded-3xl border-2 border-dashed border-gray-100">
