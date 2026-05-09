@@ -10,14 +10,14 @@ const SIZES = [
     label: 'Malá batožina', 
     price: 2, 
     icon: Backpack, 
-    desc: 'Batoh, kabelka, taška na notebook (40x30x20 cm)' 
+    desc: 'Batoh, kabelka (40x30x20 cm)' 
   },
   { 
     id: 'medium', 
     label: 'Stredná batožina', 
     price: 3, 
     icon: Briefcase, 
-    desc: 'Palubný kufor, víkendová taška (55x40x20 cm)' 
+    desc: 'Palubný kufor (55x40x20 cm)' 
   },
   { 
     id: 'large', 
