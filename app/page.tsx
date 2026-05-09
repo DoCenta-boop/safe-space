@@ -23,12 +23,10 @@ export default function Home() {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Načítanie podnikov z databázy pri štarte aplikácie
   useEffect(() => {
     async function loadData() {
       const result = await getLocations();
       if (result.success && result.data) {
-        // FILTRUJEME: Zobrazíme iba tie, ktoré nie sú pozastavené
         const activeLocations = (result.data as any[]).filter(loc => loc.isActive !== false);
         setLocations(activeLocations);
       }
@@ -90,13 +88,20 @@ export default function Home() {
     }
   };
 
+  // --- VÝPOČET ZHRNUTIA BATOŽINY ---
+  // Toto zoskupí vybrané položky a vytvorí textový reťazec, napr. "1x Malá batožina, 2x Veľká batožina"
+  const luggageSummary = Object.entries(
+    selectedItems.reduce((acc, item) => {
+      acc[item.label] = (acc[item.label] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([label, count]) => `${count}x ${label}`).join(', ');
+
   return (
     <main className="relative h-[100dvh] w-full bg-gray-100 flex flex-col overflow-hidden font-sans text-black">
-      {/* MAPA A ŠPENDLÍKY Z DATABÁZY */}
       <div className="flex-1 relative bg-[#e5e3df] overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #ffffff 2px, transparent 2px)', backgroundSize: '40px 40px' }}></div>
         
-        {/* Vykreslíme iba aktívne podniky. */}
         {!isLoadingLocations && locations.map((loc) => {
           const sFree = loc.capacities.small.max - loc.capacities.small.occupied;
           const mFree = loc.capacities.medium.max - loc.capacities.medium.occupied;
@@ -117,7 +122,6 @@ export default function Home() {
         })}
       </div>
 
-      {/* SPODNÝ PANEL */}
       <div className="absolute bottom-0 w-full max-h-[90dvh] overflow-y-auto bg-white p-6 rounded-t-[2.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.1)] pb-10 transition-all duration-300">
         <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8 shrink-0"></div>
         
@@ -148,7 +152,6 @@ export default function Home() {
           </button>
         )}
 
-        {/* POZOR: Posielame načítané locations do selektora */}
         {step === 1 && <div className="animate-in fade-in"><LocationSelector locations={locations} onSelect={handleLocationSelect} /></div>}
         {step === 2 && selectedLocation && <div className="animate-in fade-in"><SizeSelector location={selectedLocation} onNext={handleSizeSelection} /></div>}
         
@@ -183,8 +186,9 @@ export default function Home() {
             <p className="text-gray-500 mb-8 font-bold text-sm">Skontrolujte údaje a potvrďte rezerváciu.</p>
             
             <div className="bg-gray-50 p-6 rounded-[2rem] w-full mb-8 text-left border-2 border-gray-100 shadow-inner">
-              <div className="flex justify-between mb-4"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span><span className="font-black text-black">{selectedLocation?.name}</span></div>
-              <div className="flex justify-between mb-4"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span><span className="font-black text-black">{selectedItems.length} ks</span></div>
+              <div className="flex justify-between mb-4"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span><span className="font-black text-black text-right">{selectedLocation?.name}</span></div>
+              {/* TU UKAZUJEME ROZPIS BATOŽINY NAMIESTO IBA KUSOV */}
+              <div className="flex justify-between mb-4"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span><span className="font-black text-black text-right">{luggageSummary}</span></div>
               <div className="flex justify-between pt-5 border-t-2 border-gray-100 mt-2"><span className="text-black font-black uppercase text-[10px] tracking-widest">Celkom</span><span className="font-black text-3xl text-black">{totalPrice} €</span></div>
             </div>
 
@@ -204,7 +208,8 @@ export default function Home() {
 
         {step === 6 && bookingId && (
           <div className="animate-in fade-in">
-            <ReservationTicket bookingId={bookingId} userName={userData.name} size={`${selectedItems.length} ks`} userEmail={userData.email} />
+            {/* POSIELAME ROZPIS BATOŽINY DO LÍSTKA */}
+            <ReservationTicket bookingId={bookingId} userName={userData.name} size={luggageSummary} userEmail={userData.email} />
             <button onClick={() => window.location.reload()} className="w-full mt-8 py-5 bg-gray-50 font-black rounded-2xl text-gray-400 active:text-black transition-all uppercase tracking-[0.2em] text-[10px]">Späť na mapu</button>
           </div>
         )}

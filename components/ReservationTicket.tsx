@@ -9,7 +9,7 @@ import { jsPDF } from 'jspdf';
 type Props = {
   bookingId: string;
   userName: string;
-  size: string;
+  size: string; // Toto je už teraz text ako "1x Malá batožina, 2x Veľká"
   userEmail: string;
 };
 
@@ -17,17 +17,20 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
   const ticketRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Funkcia na vygenerovanie PDF
+  // Funkcia na vygenerovanie PDF (robustnejšia pre mobily)
   const generatePDF = async () => {
     if (!ticketRef.current) return null;
     
     try {
-      // Zabezpečíme, že sa to správne vyrenderuje aj na mobile
+      // Krátke zdržanie, aby sa v mobile stihli plne vyrenderovať fonty a QR kód
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const canvas = await html2canvas(ticketRef.current, {
         scale: 2, 
         useCORS: true,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        allowTaint: true
       });
       
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
@@ -44,38 +47,53 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       return pdf;
     } catch (error) {
       console.error("Chyba pri generovaní PDF:", error);
-      alert("Nepodarilo sa vytvoriť PDF. Skúste to znova.");
+      alert("Nepodarilo sa vytvoriť PDF dokument. Skúste to prosím znova.");
       return null;
     }
   };
 
-  // 1. Tlačidlo: STIAHNUŤ
+  // 1. Tlačidlo: STIAHNUŤ PDF
   const handleDownload = async () => {
     setIsGenerating(true);
     const pdf = await generatePDF();
     if (pdf) {
-      pdf.save(`SafeSpace-Rezervacia-${bookingId}.pdf`);
+      pdf.save(`SafeSpace-Listok-${bookingId}.pdf`);
     }
     setIsGenerating(false);
   };
 
-  // 2. Tlačidlo: ZDIEĽAŤ
+  // 2. Tlačidlo: ZDIEĽAŤ (Pokus o reálne zdieľanie PDF súboru, inak text)
   const handleShare = async () => {
     setIsGenerating(true);
     
     try {
-      // Otestujeme podporu natívneho zdieľania
-      if (navigator.share) {
+      const pdf = await generatePDF();
+      if (!pdf) throw new Error("Generovanie PDF zlyhalo");
+
+      // Vytvoríme reálny súbor pre natívne zdieľanie mobilu
+      const pdfBlob = pdf.output('blob');
+      const file = new File([pdfBlob], `SafeSpace-Listok-${bookingId}.pdf`, { type: 'application/pdf' });
+
+      // Zistíme, či mobil vie zdieľať priamo súbory
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
-          title: 'Moja rezervácia batožiny',
+          title: 'Môj lístok na batožinu',
           text: `Ahoj, tu je môj lístok do Safe Space. Kód rezervácie je: ${bookingId}`,
+          files: [file]
+        });
+      } 
+      // Fallback pre zariadenia, ktoré nevedia zdieľať súbor, ale aspoň text
+      else if (navigator.share) {
+        await navigator.share({
+          title: 'Môj lístok na batožinu',
+          text: `Ahoj, odložil som si batožinu v Safe Space.\nMôj kód rezervácie je: ${bookingId}\nMeno: ${userName}\nPočet: ${size}`,
           url: window.location.origin
         });
       } else {
-        alert("Vaše zariadenie nepodporuje priame zdieľanie.");
+        alert("Vaše zariadenie bohužiaľ nepodporuje priame zdieľanie.");
       }
     } catch (error) {
-      console.log("Zdieľanie zrušené alebo zlyhalo.", error);
+      console.log("Zdieľanie zrušené používateľom alebo zlyhalo.", error);
     }
     
     setIsGenerating(false);
@@ -89,7 +107,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       <h2 className="text-3xl font-black text-black mb-2 text-center tracking-tight">Rezervácia hotová!</h2>
       <p className="text-gray-500 font-bold text-sm text-center mb-8">Ukážte tento lístok pri príchode.</p>
 
-      {/* LÍSTOK, KTORÝ SA BUDE TLAČIŤ DO PDF */}
+      {/* TOTO SA FOTÍ DO PDF */}
       <div 
         ref={ticketRef} 
         className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-xl border border-gray-200 relative overflow-hidden mb-8"
@@ -102,22 +120,21 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
           </div>
         </div>
 
-        {/* VRÁTENÝ QR KÓD */}
         <div className="flex justify-center mb-6 bg-white p-4 rounded-3xl border-2 border-dashed border-gray-100">
           <QRCodeSVG value={bookingId} size={150} level="H" />
         </div>
 
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 text-center">Kód vašej rezervácie</p>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 text-center">Váš tajný kód</p>
         <h3 className="text-4xl font-black text-black tracking-tight font-mono mb-8 text-center">{bookingId}</h3>
 
         <div className="space-y-4 pt-6 border-t-2 border-gray-100">
           <div className="flex justify-between items-center">
             <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Meno</span>
-            <span className="font-black text-sm text-black">{userName}</span>
+            <span className="font-black text-sm text-black text-right">{userName}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Batožina</span>
-            <span className="font-black text-sm text-black">{size}</span>
+            <span className="font-black text-sm text-black text-right">{size}</span>
           </div>
         </div>
       </div>
