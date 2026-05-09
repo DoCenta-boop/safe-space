@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Store, Plus, MapPin, Shield, Activity, Briefcase, Luggage, Package, KeyRound, Loader2, Link as LinkIcon, ExternalLink, BarChart3, Download, Lock, Check } from 'lucide-react';
 import { addLocation, getLocations, getAllBookings } from '../../lib/bookingService';
-// Importujeme našu bezpečnú funkciu
 import { verifyAdmin } from '../../lib/auth';
 import Link from 'next/link';
 
@@ -15,25 +14,21 @@ export type Location = {
 };
 
 export default function AdminDashboard() {
-  // Autentifikácia
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false); // Nový stav pre loading tlačidla prihlásenia
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Dáta
   const [locations, setLocations] = useState<Location[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // UI Stavy
   const [activeTab, setActiveTab] = useState<'stats' | 'manage'>('stats');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newLoc, setNewLoc] = useState({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2 });
 
-  // Filtre pre štatistiky
   const [filterLocation, setFilterLocation] = useState<string>('ALL');
   const [filterPeriod, setFilterPeriod] = useState<string>('ALL');
 
@@ -45,90 +40,94 @@ export default function AdminDashboard() {
     setIsLoading(false);
   };
 
-  // BEZPEČNÉ PRIHLASOVANIE CEZ SERVER ACTION
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
-    setLoginError('');
-    
-    // Pošleme údaje na server na overenie
     const isValid = await verifyAdmin(username, password);
-
     if (isValid) {
       setIsAuthenticated(true);
       loadData();
     } else {
       setLoginError('Nesprávne meno alebo heslo');
     }
-    
     setIsLoggingIn(false);
   };
 
-  // --- LOGIKA PRE ŠTATISTIKY ---
-  const getFilteredBookings = () => {
-    return bookings.filter(b => {
-      if (filterLocation !== 'ALL' && b.locationId !== filterLocation) return false;
-      
-      if (filterPeriod !== 'ALL' && b.createdAt) {
-        const bookingDate = new Date(b.createdAt.seconds * 1000);
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - bookingDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (filterPeriod === 'WEEK' && diffDays > 7) return false;
-        if (filterPeriod === 'MONTH' && diffDays > 30) return false;
-      }
-      return true;
-    });
-  };
+  // --- FILTROVANIE A VÝPOČTY ---
+  const filteredBookings = bookings.filter(b => {
+    if (filterLocation !== 'ALL' && b.locationId !== filterLocation) return false;
+    if (filterPeriod !== 'ALL' && b.createdAt) {
+      const bookingDate = new Date(b.createdAt.seconds * 1000);
+      const now = new Date();
+      const diffDays = Math.ceil(Math.abs(now.getTime() - bookingDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (filterPeriod === 'WEEK' && diffDays > 7) return false;
+      if (filterPeriod === 'MONTH' && diffDays > 30) return false;
+    }
+    return true;
+  });
 
-  const filteredBookings = getFilteredBookings();
-
-  // Výpočty
   const totalRevenue = filteredBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
   const totalBags = filteredBookings.reduce((sum, b) => sum + (b.items?.length || 0), 0);
   const totalCompleted = filteredBookings.filter(b => b.status === 'COMPLETED').length;
   const avgDays = filteredBookings.length > 0 ? (filteredBookings.reduce((sum, b) => sum + (Number(b.bookingDays) || 1), 0) / filteredBookings.length).toFixed(1) : 0;
-  
-  // Analýza veľkostí
-  let stats = {
+
+  // Analýza veľkostí pre tabuľku v dashboarde
+  let sizeStats = {
     received: { small: 0, medium: 0, large: 0 },
     completed: { small: 0, medium: 0, large: 0 }
   };
 
   filteredBookings.forEach(b => {
     b.items?.forEach((item: any) => {
-      if (item.id === 'small') stats.received.small++;
-      if (item.id === 'medium') stats.received.medium++;
-      if (item.id === 'large') stats.received.large++;
+      const sId = item.id;
+      if (sId === 'small') sizeStats.received.small++;
+      else if (sId === 'medium') sizeStats.received.medium++;
+      else if (sId === 'large') sizeStats.received.large++;
 
       if (b.status === 'COMPLETED') {
-        if (item.id === 'small') stats.completed.small++;
-        if (item.id === 'medium') stats.completed.medium++;
-        if (item.id === 'large') stats.completed.large++;
+        if (sId === 'small') sizeStats.completed.small++;
+        else if (sId === 'medium') sizeStats.completed.medium++;
+        else if (sId === 'large') sizeStats.completed.large++;
       }
     });
   });
 
-  // Export do CSV
+  // Export do CSV s rozpisom veľkostí
   const handleExportCSV = () => {
-    const headers = ['Kód', 'Zákazník', 'Telefón', 'Suma EUR', 'Počet Tašiek', 'Status', 'Dátum'];
+    const headers = ['Kód', 'Zákazník', 'Telefón', 'Suma EUR', 'Spolu Tašiek', 'Malé', 'Stredné', 'Veľké', 'Status', 'Dátum'];
+    
     const rows = filteredBookings.map(b => {
       const date = b.createdAt ? new Date(b.createdAt.seconds * 1000).toLocaleDateString('sk-SK') : 'Neznámy';
-      return `${b.bookingId},${b.userName},${b.userPhone || ''},${b.totalPrice},${b.items?.length || 0},${b.status},${date}`;
+      
+      let s = 0, m = 0, l = 0;
+      b.items?.forEach((i: any) => {
+        if (i.id === 'small') s++;
+        else if (i.id === 'medium') m++;
+        else if (i.id === 'large') l++;
+      });
+
+      return [
+        b.bookingId,
+        `"${b.userName}"`,
+        `"${b.userPhone || ''}"`,
+        b.totalPrice,
+        b.items?.length || 0,
+        s, m, l,
+        b.status,
+        date
+      ].join(',');
     });
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Report_${filterLocation}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `SafeSpace_Report_${filterLocation}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // --- LOGIKA PRE PODNIKY ---
   const handleAddLocation = async () => {
     if (!newLoc.name || !newLoc.address) return alert("Vyplňte názov a adresu podniku.");
     setIsSubmitting(true);
@@ -141,9 +140,8 @@ export default function AdminDashboard() {
       },
       mapPosition: { top: '50%', left: '50%' } 
     });
-
     if (result.success) {
-      alert(`Podnik vytvorený!\nOdkaz: /partner/${result.slug}\nPIN: ${result.pin}`);
+      alert("Podnik vytvorený!");
       loadData();
       setShowAddForm(false);
       setNewLoc({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2 });
@@ -153,24 +151,18 @@ export default function AdminDashboard() {
     setIsSubmitting(false);
   };
 
-  // --- ZOBRAZENIA ---
-
   if (!isAuthenticated) {
     return (
-      <main className="min-h-[100dvh] bg-gray-50 flex flex-col items-center justify-center p-6 font-sans">
+      <main className="min-h-[100dvh] bg-gray-50 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center">
-          <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Lock className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-black text-black mb-2">Admin Panel</h1>
-          <p className="text-gray-500 text-sm font-bold mb-8">Prihláste sa pre prístup k systému.</p>
-
+          <Lock className="w-12 h-12 text-red-600 mx-auto mb-6" />
+          <h1 className="text-2xl font-black mb-8">Admin Login</h1>
           <form onSubmit={handleLogin} className="space-y-4">
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Prihlasovacie meno" className="w-full text-center font-bold py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none focus:border-black text-black" />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Heslo" className="w-full text-center font-bold py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none focus:border-black text-black" />
+            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Meno" className="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-black font-bold" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Heslo" className="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-black font-bold" />
             {loginError && <p className="text-red-500 font-bold text-sm">{loginError}</p>}
-            <button type="submit" disabled={isLoggingIn} className="w-full bg-black text-white font-black text-lg py-5 rounded-2xl active:scale-95 transition-transform mt-4 flex items-center justify-center gap-2">
-              {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : "Prihlásiť sa"}
+            <button type="submit" disabled={isLoggingIn} className="w-full bg-black text-white font-black py-5 rounded-2xl flex items-center justify-center gap-2">
+              {isLoggingIn ? <Loader2 className="animate-spin w-5 h-5" /> : "Prihlásiť sa"}
             </button>
           </form>
         </div>
@@ -190,17 +182,14 @@ export default function AdminDashboard() {
         <button onClick={() => setIsAuthenticated(false)} className="text-gray-400 font-black text-[10px] uppercase tracking-widest hover:text-black">Odhlásiť</button>
       </header>
 
-      {/* Taby */}
       <div className="flex bg-gray-200 p-1.5 rounded-2xl mb-8">
         <button onClick={() => setActiveTab('stats')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm transition-all ${activeTab === 'stats' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}><BarChart3 className="w-4 h-4" /> Štatistiky</button>
         <button onClick={() => setActiveTab('manage')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm transition-all ${activeTab === 'manage' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}><Store className="w-4 h-4" /> Podniky</button>
       </div>
 
-      {/* ZÁLOŽKA: ŠTATISTIKY */}
       {activeTab === 'stats' && (
         <div className="animate-in fade-in">
-          {/* Filtre */}
-          <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-6 flex flex-col gap-4 md:flex-row md:items-center">
+          <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-6 flex flex-col gap-4 md:flex-row md:items-end">
             <div className="flex-1">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Filtrovať podnik</label>
               <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-black font-bold py-3 px-4 rounded-xl outline-none">
@@ -219,7 +208,6 @@ export default function AdminDashboard() {
             <button onClick={handleExportCSV} className="bg-blue-600 text-white font-black py-3 px-6 rounded-xl flex items-center justify-center gap-2 mt-4 md:mt-0 active:scale-95 transition-transform"><Download className="w-5 h-5"/> Export CSV</button>
           </div>
 
-          {/* Rýchle čísla */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
               <div className="text-gray-400 mb-2"><Activity className="w-5 h-5" /></div>
@@ -260,24 +248,24 @@ export default function AdminDashboard() {
                     <div className="p-2 bg-gray-50 rounded-lg"><Briefcase className="w-4 h-4 text-gray-400"/></div>
                     <span className="font-bold text-sm">Malá batožina</span>
                   </td>
-                  <td className="p-4 text-center font-black text-lg">{stats.received.small}</td>
-                  <td className="p-4 text-center font-black text-lg text-green-600">{stats.completed.small}</td>
+                  <td className="p-4 text-center font-black text-lg">{sizeStats.received.small}</td>
+                  <td className="p-4 text-center font-black text-lg text-green-600">{sizeStats.completed.small}</td>
                 </tr>
                 <tr>
                   <td className="p-4 flex items-center gap-3">
                     <div className="p-2 bg-gray-50 rounded-lg"><Luggage className="w-4 h-4 text-gray-400"/></div>
                     <span className="font-bold text-sm">Stredná batožina</span>
                   </td>
-                  <td className="p-4 text-center font-black text-lg">{stats.received.medium}</td>
-                  <td className="p-4 text-center font-black text-lg text-green-600">{stats.completed.medium}</td>
+                  <td className="p-4 text-center font-black text-lg">{sizeStats.received.medium}</td>
+                  <td className="p-4 text-center font-black text-lg text-green-600">{sizeStats.completed.medium}</td>
                 </tr>
                 <tr>
                   <td className="p-4 flex items-center gap-3">
                     <div className="p-2 bg-gray-50 rounded-lg"><Package className="w-4 h-4 text-gray-400"/></div>
                     <span className="font-bold text-sm">Veľká batožina</span>
                   </td>
-                  <td className="p-4 text-center font-black text-lg">{stats.received.large}</td>
-                  <td className="p-4 text-center font-black text-lg text-green-600">{stats.completed.large}</td>
+                  <td className="p-4 text-center font-black text-lg">{sizeStats.received.large}</td>
+                  <td className="p-4 text-center font-black text-lg text-green-600">{sizeStats.completed.large}</td>
                 </tr>
               </tbody>
             </table>
@@ -285,7 +273,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ZÁLOŽKA: SPRÁVA PODNIKOV */}
       {activeTab === 'manage' && (
         <div className="animate-in fade-in">
           <div className="flex justify-between items-center mb-4">
