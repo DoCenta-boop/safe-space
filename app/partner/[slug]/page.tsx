@@ -6,17 +6,24 @@ import { useParams } from 'next/navigation';
 import QRScanner from '../../../components/QRScanner';
 import { getBookingByCode, updateBookingStatus, getLocationBySlug, listenToActiveBookings } from '../../../lib/bookingService';
 
-// --- ŽIVÝ ČASOVAČ (Odpočet po tretinách) ---
-const BookingTimer = ({ createdAt, bookingDays }: { createdAt: any, bookingDays: number }) => {
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [statusStyle, setStatusStyle] = useState('text-green-700 bg-green-100 border-green-200');
+// --- ŽIVÝ ČASOVAČ (Odpočet až po prevzatí personálom) ---
+const BookingTimer = ({ status, createdAt, storedAt, bookingDays }: { status: string, createdAt: any, storedAt?: any, bookingDays: number }) => {
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [statusStyle, setStatusStyle] = useState('text-gray-500 bg-gray-100 border-gray-200');
 
   useEffect(() => {
-    if (!createdAt) return;
-    
-    // Výpočet trvania v milisekundách
+    // Ak ešte batožina nebola fyzicky prevzatá
+    if (status === 'PENDING') {
+      setStatusStyle('text-orange-700 bg-orange-100 border-orange-200');
+      return;
+    }
+
+    // Berieme čas prevzatia (storedAt). Pre staršie rezervácie použijeme createdAt ako záchranu
+    const startTimestamp = storedAt || createdAt;
+    if (!startTimestamp) return;
+
     const days = bookingDays || 1;
-    const startMs = createdAt.seconds * 1000;
+    const startMs = startTimestamp.seconds * 1000;
     const totalDurationMs = days * 24 * 60 * 60 * 1000;
     const endMs = startMs + totalDurationMs;
 
@@ -25,31 +32,35 @@ const BookingTimer = ({ createdAt, bookingDays }: { createdAt: any, bookingDays:
       const remaining = endMs - now;
       setTimeLeft(remaining);
 
-      // Zistenie percent a zmena farby (Tretiny)
       const ratio = remaining / totalDurationMs;
       
       if (remaining <= 0) {
         setStatusStyle('text-white bg-red-600 border-red-700 animate-pulse shadow-lg shadow-red-500/30');
       } else if (ratio > 0.66) {
-        // Prvá tretina času (Zelená)
         setStatusStyle('text-green-700 bg-green-100 border-green-200');
       } else if (ratio > 0.33) {
-        // Druhá tretina času (Oranžová)
         setStatusStyle('text-orange-700 bg-orange-100 border-orange-200');
       } else {
-        // Posledná tretina času (Červená)
         setStatusStyle('text-red-700 bg-red-100 border-red-200');
       }
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 1000); // Aktualizácia každú sekundu
+    const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [createdAt, bookingDays]);
+  }, [status, storedAt, createdAt, bookingDays]);
 
-  if (!createdAt) return null;
+  // Vizuál, keď je rezervácia len vytvorená, ale neprevzatá
+  if (status === 'PENDING') {
+    return (
+      <div className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border flex items-center gap-1 w-max transition-colors text-orange-700 bg-orange-100 border-orange-200">
+        <Clock className="w-3 h-3" /> Čaká na prevzatie
+      </div>
+    );
+  }
 
-  // Formátovanie času
+  if (timeLeft === null) return null;
+
   const formatTime = (ms: number) => {
     if (ms <= 0) return 'Vypršalo';
     const d = Math.floor(ms / (1000 * 60 * 60 * 24));
@@ -176,13 +187,16 @@ export default function PartnerDashboard() {
     if (!booking) return;
     setIsLoading(true);
     const newStatus = booking.status === 'PENDING' ? 'STORED' : 'COMPLETED';
+    
+    // Zapíšeme zmenu do databázy
     const result = await updateBookingStatus(booking.id, newStatus);
     setIsLoading(false);
 
     if (result.success) {
       if (newStatus === 'STORED') {
-        alert('Batožina bola úspešne prevzatá!');
-        setBooking({ ...booking, status: 'STORED' });
+        alert('Batožina bola úspešne prevzatá! Časovač je spustený.');
+        // Lokálne updatneme stav, aby sme nečakali na live sync
+        setBooking({ ...booking, status: 'STORED', storedAt: { seconds: Math.floor(Date.now() / 1000) } });
       } else {
         alert('Batožina bola odovzdaná!');
         setBooking(null);
@@ -255,7 +269,6 @@ export default function PartnerDashboard() {
                   )}
                 </div>
 
-                {/* NOVÉ INFO: ČAS ÚSCHOVY A ODPOČET */}
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Doba úschovy</span>
                   <span className="font-black text-lg">{booking.bookingDays || 1} {booking.bookingDays === 1 ? 'deň' : booking.bookingDays < 5 ? 'dni' : 'dní'}</span>
@@ -264,7 +277,12 @@ export default function PartnerDashboard() {
                 {booking.status !== 'COMPLETED' && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Zostávajúci čas</span>
-                    <BookingTimer createdAt={booking.createdAt} bookingDays={booking.bookingDays || 1} />
+                    <BookingTimer 
+                      status={booking.status} 
+                      createdAt={booking.createdAt} 
+                      storedAt={booking.storedAt} 
+                      bookingDays={booking.bookingDays || 1} 
+                    />
                   </div>
                 )}
 
@@ -339,7 +357,12 @@ export default function PartnerDashboard() {
                         {/* ČASOVAČ V ZOZNAME */}
                         <div className="pt-3 border-t border-gray-100 w-full flex justify-between items-center">
                           <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Časový limit</span>
-                          <BookingTimer createdAt={b.createdAt} bookingDays={b.bookingDays || 1} />
+                          <BookingTimer 
+                            status={b.status} 
+                            createdAt={b.createdAt} 
+                            storedAt={b.storedAt} 
+                            bookingDays={b.bookingDays || 1} 
+                          />
                         </div>
 
                       </button>
