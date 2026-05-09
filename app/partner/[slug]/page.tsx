@@ -1,10 +1,74 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ScanLine, Search, Package, Check, ArrowRight, Loader2, KeyRound, AlertCircle, Phone, List, QrCode } from 'lucide-react';
+import { ScanLine, Search, Package, Check, ArrowRight, Loader2, KeyRound, AlertCircle, Phone, List, QrCode, Clock } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import QRScanner from '../../../components/QRScanner';
 import { getBookingByCode, updateBookingStatus, getLocationBySlug, listenToActiveBookings } from '../../../lib/bookingService';
+
+// --- ŽIVÝ ČASOVAČ (Odpočet po tretinách) ---
+const BookingTimer = ({ createdAt, bookingDays }: { createdAt: any, bookingDays: number }) => {
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [statusStyle, setStatusStyle] = useState('text-green-700 bg-green-100 border-green-200');
+
+  useEffect(() => {
+    if (!createdAt) return;
+    
+    // Výpočet trvania v milisekundách
+    const days = bookingDays || 1;
+    const startMs = createdAt.seconds * 1000;
+    const totalDurationMs = days * 24 * 60 * 60 * 1000;
+    const endMs = startMs + totalDurationMs;
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const remaining = endMs - now;
+      setTimeLeft(remaining);
+
+      // Zistenie percent a zmena farby (Tretiny)
+      const ratio = remaining / totalDurationMs;
+      
+      if (remaining <= 0) {
+        setStatusStyle('text-white bg-red-600 border-red-700 animate-pulse shadow-lg shadow-red-500/30');
+      } else if (ratio > 0.66) {
+        // Prvá tretina času (Zelená)
+        setStatusStyle('text-green-700 bg-green-100 border-green-200');
+      } else if (ratio > 0.33) {
+        // Druhá tretina času (Oranžová)
+        setStatusStyle('text-orange-700 bg-orange-100 border-orange-200');
+      } else {
+        // Posledná tretina času (Červená)
+        setStatusStyle('text-red-700 bg-red-100 border-red-200');
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000); // Aktualizácia každú sekundu
+    return () => clearInterval(interval);
+  }, [createdAt, bookingDays]);
+
+  if (!createdAt) return null;
+
+  // Formátovanie času
+  const formatTime = (ms: number) => {
+    if (ms <= 0) return 'Vypršalo';
+    const d = Math.floor(ms / (1000 * 60 * 60 * 24));
+    const h = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((ms % (1000 * 60)) / 1000);
+
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m ${s}s`;
+  };
+
+  return (
+    <div className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border flex items-center gap-1 w-max transition-colors ${statusStyle}`}>
+      <Clock className="w-3 h-3" /> {formatTime(timeLeft)}
+    </div>
+  );
+};
+
 
 export default function PartnerDashboard() {
   const params = useParams();
@@ -36,18 +100,15 @@ export default function PartnerDashboard() {
       if (result.success && result.data) {
         setLocation(result.data);
         
-        // Kontrola, či už je personál prihlásený z minula
         const savedAuth = localStorage.getItem(`auth_${slug}`);
         if (savedAuth) {
-          const authData = JSON.parse(savedAuth); // OPRAVENÉ
+          const authData = JSON.parse(savedAuth);
           const timePassed = new Date().getTime() - authData.timestamp;
           const hours12 = 12 * 60 * 60 * 1000;
 
-          // OPRAVENÉ (result.data as any).pin kvôli TypeScriptu
           if (timePassed < hours12 && authData.pin === (result.data as any).pin) {
             setIsAuthenticated(true);
           } else {
-            // Relácia vypršala alebo sa zmenil PIN
             localStorage.removeItem(`auth_${slug}`);
           }
         }
@@ -57,18 +118,16 @@ export default function PartnerDashboard() {
     init();
   }, [slug]);
 
-  // Nastavenie živého počúvania databázy (Live Updates)
+  // Nastavenie živého počúvania databázy
   useEffect(() => {
     let unsubscribe: () => void;
 
-    // Počúvame iba vtedy, ak je overený a podnik je načítaný
     if (isAuthenticated && location) {
       unsubscribe = listenToActiveBookings(location.id, (liveData) => {
         setActiveBookings(liveData);
       });
     }
 
-    // Odpojenie poslucháča pri odchode zo stránky, aby sme nezaťažovali Firebase
     return () => {
       if (unsubscribe) unsubscribe();
     };
@@ -79,7 +138,6 @@ export default function PartnerDashboard() {
     if (pinInput === location?.pin) {
       setIsAuthenticated(true);
       setLoginError('');
-      // Uloženie úspešného prihlásenia s aktuálnym časom
       localStorage.setItem(`auth_${slug}`, JSON.stringify({
         pin: pinInput,
         timestamp: new Date().getTime()
@@ -130,7 +188,6 @@ export default function PartnerDashboard() {
         setBooking(null);
         setManualCode('');
       }
-      // Netreba volať loadActiveBookings(), live poslucháč to urobí automaticky!
     }
   };
 
@@ -180,7 +237,7 @@ export default function PartnerDashboard() {
                 </div>
                 <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
                   booking.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : 
-                  booking.status === 'STORED' ? 'bg-green-100 text-green-700' :
+                  booking.status === 'STORED' ? 'bg-blue-100 text-blue-700' :
                   'bg-gray-100 text-gray-500'
                 }`}>
                   {booking.status === 'PENDING' ? 'Na príchod' : 
@@ -197,6 +254,20 @@ export default function PartnerDashboard() {
                     <span className="font-bold text-gray-400">Neuvedený</span>
                   )}
                 </div>
+
+                {/* NOVÉ INFO: ČAS ÚSCHOVY A ODPOČET */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Doba úschovy</span>
+                  <span className="font-black text-lg">{booking.bookingDays || 1} {booking.bookingDays === 1 ? 'deň' : booking.bookingDays < 5 ? 'dni' : 'dní'}</span>
+                </div>
+                
+                {booking.status !== 'COMPLETED' && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Zostávajúci čas</span>
+                    <BookingTimer createdAt={booking.createdAt} bookingDays={booking.bookingDays || 1} />
+                  </div>
+                )}
+
                 <div className="pt-4 border-t border-gray-100">
                   <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest block mb-3">Batožina ({booking.items?.length || 0} ks)</span>
                   <div className="flex flex-wrap gap-2">
@@ -216,7 +287,7 @@ export default function PartnerDashboard() {
               ) : (
                 <button 
                   onClick={handleAction} disabled={isLoading}
-                  className={`w-full font-black text-lg py-5 rounded-[1.5rem] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all uppercase tracking-widest ${booking.status === 'PENDING' ? 'bg-black text-white' : 'bg-green-600 text-white'}`}
+                  className={`w-full font-black text-lg py-5 rounded-[1.5rem] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all uppercase tracking-widest ${booking.status === 'PENDING' ? 'bg-black text-white' : 'bg-blue-600 text-white'}`}
                 >
                   {isLoading ? <Loader2 className="animate-spin w-7 h-7" /> : (booking.status === 'PENDING' ? <><Check className="w-7 h-7" /> Prevziať</> : <><ArrowRight className="w-7 h-7" /> Odovzdať</>)}
                 </button>
@@ -252,15 +323,25 @@ export default function PartnerDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {activeBookings.map(b => (
-                      <button key={b.id} onClick={() => setBooking(b)} className="w-full bg-white p-6 rounded-3xl shadow-sm border border-gray-50 flex items-center justify-between active:scale-95 transition-all text-left">
-                        <div>
-                          <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest inline-block mb-2 ${b.status === 'PENDING' ? 'bg-orange-100 text-orange-700 animate-pulse' : 'bg-green-100 text-green-700'}`}>
-                            {b.status === 'PENDING' ? 'Na príchod' : 'V úschovni'}
+                      <button key={b.id} onClick={() => setBooking(b)} className="w-full bg-white p-5 rounded-3xl shadow-sm border border-gray-50 flex flex-col active:scale-95 transition-all text-left group">
+                        
+                        <div className="flex justify-between items-start w-full mb-3">
+                          <div>
+                            <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest inline-block mb-1.5 ${b.status === 'PENDING' ? 'bg-orange-100 text-orange-700 animate-pulse' : 'bg-blue-100 text-blue-700'}`}>
+                              {b.status === 'PENDING' ? 'Na príchod' : 'V úschovni'}
+                            </div>
+                            <h4 className="font-black text-black">{b.userName}</h4>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{b.items?.length || 0} kusy • {b.bookingId}</p>
                           </div>
-                          <h4 className="font-black text-black">{b.userName}</h4>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase mt-1 tracking-wider">{b.items?.length || 0} kusy • {b.bookingId}</p>
+                          <div className="bg-gray-50 p-3 rounded-2xl group-hover:bg-black group-hover:text-white transition-colors"><ArrowRight className="w-5 h-5" /></div>
                         </div>
-                        <div className="bg-gray-50 p-3 rounded-2xl"><ArrowRight className="w-5 h-5 text-gray-300" /></div>
+
+                        {/* ČASOVAČ V ZOZNAME */}
+                        <div className="pt-3 border-t border-gray-100 w-full flex justify-between items-center">
+                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Časový limit</span>
+                          <BookingTimer createdAt={b.createdAt} bookingDays={b.bookingDays || 1} />
+                        </div>
+
                       </button>
                     ))}
                   </div>
@@ -271,7 +352,6 @@ export default function PartnerDashboard() {
         )}
       </div>
 
-      {/* SPODNÁ NAVIGÁCIA so živými číslami */}
       <div className="absolute bottom-0 w-full bg-white border-t border-gray-100 p-4 pb-8 flex gap-4 shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
         <button 
           onClick={() => { setBooking(null); setActiveTab('scan'); }} 

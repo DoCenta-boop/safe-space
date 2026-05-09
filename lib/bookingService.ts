@@ -302,3 +302,22 @@ export function listenToActiveBookings(locationId: string, callback: (bookings: 
   // Vrátime funkciu na zrušenie poslucháča (keď sa komponent odpojí)
   return unsubscribe;
 }
+// --- LIVE FUNKCIA PRE ADMINA (VŠETKY REZERVÁCIE) ---
+export function listenToAllBookings(callback: (bookings: any[]) => void) {
+    // Tu nefiltrujeme podľa locationId, ťaháme úplne všetko
+    const q = query(collection(db, "bookings"));
+  
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const allBookings: any[] = [];
+      querySnapshot.forEach((doc) => {
+        allBookings.push({ id: doc.id, ...doc.data() });
+      });
+      // Zoradíme od najnovších po najstaršie
+      allBookings.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      callback(allBookings);
+    }, (error) => {
+      console.error("Chyba pri živom spojení pre Admina:", error);
+    });
+  
+    return unsubscribe;
+  }

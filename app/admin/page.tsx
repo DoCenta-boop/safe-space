@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Store, Plus, MapPin, Shield, Activity, Briefcase, Luggage, Package, KeyRound, Loader2, Link as LinkIcon, ExternalLink, BarChart3, Download, Lock, Check, Trash2, Edit, RefreshCw, PauseCircle, PlayCircle, XCircle, Settings, List as ListIcon } from 'lucide-react';
-import { addLocation, getLocations, getAllBookings, updateLocationData, deleteLocationData, resetLocationPin, toggleLocationActive, cancelBookingStatus, getPricingConfig, updatePricingConfig } from '../../lib/bookingService';
+import { addLocation, getLocations, updateLocationData, deleteLocationData, resetLocationPin, toggleLocationActive, cancelBookingStatus, getPricingConfig, updatePricingConfig, listenToAllBookings } from '../../lib/bookingService';
 import { verifyAdmin } from '../../lib/auth';
 import Link from 'next/link';
 
@@ -36,11 +36,11 @@ export default function AdminDashboard() {
   const [filterLocation, setFilterLocation] = useState<string>('ALL');
   const [filterPeriod, setFilterPeriod] = useState<string>('ALL');
 
+  // Načítanie podnikov a cenníka
   const loadData = async () => {
     setIsLoading(true);
-    const [locResult, bookResult, priceResult] = await Promise.all([getLocations(), getAllBookings(), getPricingConfig()]);
+    const [locResult, priceResult] = await Promise.all([getLocations(), getPricingConfig()]);
     if (locResult.success) setLocations(locResult.data as Location[]);
-    if (bookResult.success) setBookings(bookResult.data as any[]);
     if (priceResult.success) setPricing(priceResult.data as any);
     setIsLoading(false);
   };
@@ -57,6 +57,21 @@ export default function AdminDashboard() {
     }
     setIsLoggingIn(false);
   };
+
+  // --- ŽIVÉ SPOJENIE PRE REZERVÁCIE ---
+  useEffect(() => {
+    let unsubscribe: () => void;
+
+    if (isAuthenticated) {
+      unsubscribe = listenToAllBookings((liveBookings) => {
+        setBookings(liveBookings);
+      });
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isAuthenticated]);
 
   // --- FILTROVANIE A VÝPOČTY (Štatistiky) ---
   const filteredBookings = bookings.filter(b => {
@@ -184,7 +199,9 @@ export default function AdminDashboard() {
   // --- AKCIE PRE REZERVÁCIE A NASTAVENIA ---
   const handleCancelBooking = async (id: string, code: string) => {
     if (window.confirm(`Naozaj chcete natrvalo STORNOVAŤ rezerváciu ${code}?`)) {
-      setIsLoading(true); await cancelBookingStatus(id); loadData();
+      setIsLoading(true); await cancelBookingStatus(id);
+      // Netreba loadData(), live poslucháč to vybaví
+      setIsLoading(false);
     }
   };
 
@@ -218,7 +235,7 @@ export default function AdminDashboard() {
 
   if (isLoading) return <div className="min-h-[100dvh] flex items-center justify-center bg-gray-50"><Loader2 className="w-10 h-10 animate-spin text-black" /></div>;
 
-  // Aktívne rezervácie pre nový tab
+  // Aktívne rezervácie pre tab (čakajúce a uložené)
   const activeBookingsList = bookings.filter(b => b.status === 'PENDING' || b.status === 'STORED');
 
   return (
@@ -226,12 +243,14 @@ export default function AdminDashboard() {
       <header className="mb-6 mt-2 md:mt-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight flex items-center gap-2"><Shield className="w-6 h-6 text-red-600" /> SuperAdmin</h1>
-          <p className="text-gray-500 font-bold text-[10px] uppercase tracking-widest mt-1">Riadiace centrum</p>
+          <p className="text-gray-500 font-bold text-[10px] uppercase tracking-widest mt-1 flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Pripojené online
+          </p>
         </div>
         <button onClick={() => setIsAuthenticated(false)} className="text-gray-400 font-black text-[10px] uppercase tracking-widest hover:text-black">Odhlásiť</button>
       </header>
 
-      {/* Navigačné taby (Mobil vs Desktop) */}
+      {/* Navigačné taby */}
       <div className="grid grid-cols-2 md:flex bg-gray-200 p-1.5 rounded-2xl mb-8 gap-1">
         <button onClick={() => setActiveTab('stats')} className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl font-black text-xs md:text-sm transition-all ${activeTab === 'stats' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}><BarChart3 className="w-4 h-4" /> Štatistiky</button>
         <button onClick={() => setActiveTab('bookings')} className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl font-black text-xs md:text-sm transition-all ${activeTab === 'bookings' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}><ListIcon className="w-4 h-4" /> Rezervácie</button>
