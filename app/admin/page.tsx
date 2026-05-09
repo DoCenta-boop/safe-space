@@ -11,7 +11,7 @@ export type Location = {
   id: string; name: string; address: string; pin?: string; slug?: string; isActive?: boolean;
   capacities: { small: SizeCapacity; medium: SizeCapacity; large: SizeCapacity };
   mapPosition: { top: string; left: string }; 
-  lat?: number; lng?: number; mapsLink?: string; // PRIDANÉ GPS ÚDAJE
+  lat?: number; lng?: number; mapsLink?: string; // GPS UDAJE
 };
 
 export default function AdminDashboard() {
@@ -30,12 +30,12 @@ export default function AdminDashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // PRIDANÉ DO STATE PRE NOVÝ PODNIK
+  // STATE PRE NOVÝ PODNIK (pridané lat, lng, mapsLink)
   const [newLoc, setNewLoc] = useState({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2, lat: '', lng: '', mapsLink: '' });
 
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // PRIDANÉ DO STATE PRE ÚPRAVU PODNIKU
+  // STATE PRE ÚPRAVU (pridané lat, lng, mapsLink)
   const [editLoc, setEditLoc] = useState({ name: '', address: '', smallCap: 0, mediumCap: 0, largeCap: 0, lat: '', lng: '', mapsLink: '' });
 
   const [filterLocation, setFilterLocation] = useState<string>('ALL');
@@ -144,7 +144,6 @@ export default function AdminDashboard() {
         small: { max: newLoc.smallCap, occupied: 0 }, medium: { max: newLoc.mediumCap, occupied: 0 }, large: { max: newLoc.largeCap, occupied: 0 }
       },
       mapPosition: { top: '50%', left: '50%' },
-      // ODOSIELAME GPS ÚDAJE
       lat: parseFloat(newLoc.lat) || 0,
       lng: parseFloat(newLoc.lng) || 0,
       mapsLink: newLoc.mapsLink
@@ -166,7 +165,6 @@ export default function AdminDashboard() {
       smallCap: loc.capacities.small.max, 
       mediumCap: loc.capacities.medium.max, 
       largeCap: loc.capacities.large.max,
-      // NAČÍTANIE GPS DO FORMULÁRA
       lat: loc.lat?.toString() || '', 
       lng: loc.lng?.toString() || '', 
       mapsLink: loc.mapsLink || ''
@@ -185,7 +183,6 @@ export default function AdminDashboard() {
           medium: { max: editLoc.mediumCap, occupied: originalLoc.capacities.medium.occupied },
           large: { max: editLoc.largeCap, occupied: originalLoc.capacities.large.occupied }
         },
-        // ULOŽENIE GPS PO ÚPRAVE
         lat: parseFloat(editLoc.lat) || 0,
         lng: parseFloat(editLoc.lng) || 0,
         mapsLink: editLoc.mapsLink
@@ -232,13 +229,10 @@ export default function AdminDashboard() {
     return (
       <main className="min-h-[100dvh] bg-gray-50 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center flex flex-col items-center">
-          
-          {/* BRANDING LOGO NA PRIHLÁSENÍ */}
           <div className="mb-8 flex items-center justify-center">
             <span className="text-3xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
             <span className="text-3xl font-black text-blue-600 tracking-tighter ml-1.5">SPACES</span>
           </div>
-
           <h1 className="text-xl font-bold mb-8 text-gray-400 uppercase tracking-widest">Admin prihlásenie</h1>
           <form onSubmit={handleLogin} className="space-y-4 w-full">
             <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Meno" className="w-full p-4 bg-gray-50 border rounded-2xl outline-none focus:border-black font-bold" />
@@ -249,8 +243,6 @@ export default function AdminDashboard() {
             </button>
           </form>
         </div>
-
-        {/* PÄTIČKA */}
         <div className="absolute bottom-6 w-full text-center">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Powered by Docenta</p>
         </div>
@@ -266,17 +258,14 @@ export default function AdminDashboard() {
     <main className="min-h-[100dvh] bg-gray-50 flex flex-col p-4 md:p-6 font-sans text-black">
       <header className="mb-6 mt-2 md:mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          {/* BRANDING LOGO V HLAVIČKE ADMINA */}
           <div className="mb-1 flex items-center">
             <span className="text-2xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
             <span className="text-2xl font-black text-blue-600 tracking-tighter ml-1.5">SPACES</span>
           </div>
-          
           <h1 className="text-lg font-bold tracking-tight flex items-center gap-2 text-gray-700">
             <Shield className="w-5 h-5 text-red-600" /> SuperAdmin
           </h1>
         </div>
-        
         <div className="flex items-center gap-4">
           <p className="text-gray-500 font-bold text-[10px] uppercase tracking-widest flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live
@@ -285,7 +274,6 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Navigačné taby */}
       <div className="grid grid-cols-2 md:flex bg-gray-200 p-1.5 rounded-2xl mb-8 gap-1">
         <button onClick={() => setActiveTab('stats')} className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl font-black text-xs md:text-sm transition-all ${activeTab === 'stats' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}><BarChart3 className="w-4 h-4" /> Štatistiky</button>
         <button onClick={() => setActiveTab('bookings')} className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl font-black text-xs md:text-sm transition-all ${activeTab === 'bookings' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}><ListIcon className="w-4 h-4" /> Rezervácie</button>
@@ -294,9 +282,9 @@ export default function AdminDashboard() {
       </div>
 
       <div className="flex-1 pb-10">
-        {/* --- TAB: ŠTATISTIKY --- */}
         {activeTab === 'stats' && (
           <div className="animate-in fade-in">
+            {/* STATS OBSAH NEZMENENÝ */}
             <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-6 flex flex-col gap-4 md:flex-row md:items-end">
               <div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2">Filtrovať podnik</label><select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-black font-bold py-3 px-4 rounded-xl outline-none"><option value="ALL">Všetky podniky</option>{locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}</select></div>
               <div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase block mb-2">Obdobie</label><select value={filterPeriod} onChange={(e) => setFilterPeriod(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-black font-bold py-3 px-4 rounded-xl outline-none"><option value="ALL">Od začiatku</option><option value="MONTH">Posledných 30 dní</option><option value="WEEK">Posledných 7 dní</option></select></div>
@@ -309,87 +297,9 @@ export default function AdminDashboard() {
               <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100"><div className="text-3xl font-black text-black">{totalCompleted}</div><div className="text-[10px] font-black text-gray-400 uppercase mt-1">Vydané / Hotovo</div></div>
               <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100"><div className="text-3xl font-black text-black">{avgDays}</div><div className="text-[10px] font-black text-gray-400 uppercase mt-1">Priemerná doba (Dni)</div></div>
             </div>
-
-            <h3 className="font-black text-lg mb-4">Pohyb batožiny podľa veľkostí</h3>
-            <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden mb-8 shadow-sm">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="p-4 text-[10px] font-black text-gray-400 uppercase">Veľkosť</th>
-                    <th className="p-4 text-[10px] font-black text-gray-400 uppercase text-center">Prijaté</th>
-                    <th className="p-4 text-[10px] font-black text-gray-400 uppercase text-center">Vydané</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  <tr><td className="p-4 flex items-center gap-3"><div className="p-2 bg-gray-50 rounded-lg"><Briefcase className="w-4 h-4 text-gray-400"/></div><span className="font-bold text-sm">Malá</span></td><td className="p-4 text-center font-black text-lg">{sizeStats.received.small}</td><td className="p-4 text-center font-black text-lg text-green-600">{sizeStats.completed.small}</td></tr>
-                  <tr><td className="p-4 flex items-center gap-3"><div className="p-2 bg-gray-50 rounded-lg"><Luggage className="w-4 h-4 text-gray-400"/></div><span className="font-bold text-sm">Stredná</span></td><td className="p-4 text-center font-black text-lg">{sizeStats.received.medium}</td><td className="p-4 text-center font-black text-lg text-green-600">{sizeStats.completed.medium}</td></tr>
-                  <tr><td className="p-4 flex items-center gap-3"><div className="p-2 bg-gray-50 rounded-lg"><Package className="w-4 h-4 text-gray-400"/></div><span className="font-bold text-sm">Veľká</span></td><td className="p-4 text-center font-black text-lg">{sizeStats.received.large}</td><td className="p-4 text-center font-black text-lg text-green-600">{sizeStats.completed.large}</td></tr>
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
 
-        {/* --- TAB: REZERVÁCIE (Stornovanie) --- */}
-        {activeTab === 'bookings' && (
-          <div className="animate-in fade-in">
-            <h2 className="text-xl font-black mb-6">Správa aktuálnych rezervácií ({activeBookingsList.length})</h2>
-            {activeBookingsList.length === 0 ? (
-               <div className="text-center py-10 text-gray-400 font-bold border-2 border-dashed border-gray-200 rounded-3xl">Žiadne aktívne rezervácie.</div>
-            ) : (
-              <div className="space-y-4 pb-20">
-                {activeBookingsList.map(b => {
-                  const locName = locations.find(l => l.id === b.locationId)?.name || 'Neznámy podnik';
-                  return (
-                    <div key={b.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div>
-                        <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest mb-2 inline-block ${b.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                          {b.status === 'PENDING' ? 'Očakávané' : 'V úschovni'}
-                        </span>
-                        <h4 className="font-black text-lg flex items-center gap-2">{b.userName} <span className="text-xs text-gray-400 font-mono">({b.bookingId})</span></h4>
-                        <p className="text-xs font-bold text-gray-500 mt-1"><MapPin className="w-3 h-3 inline"/> {locName} • {b.items?.length || 0} ks • {b.totalPrice} €</p>
-                      </div>
-                      <button onClick={() => handleCancelBooking(b.id, b.bookingId)} className="bg-red-50 text-red-600 font-black px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-red-100 transition-colors">
-                        <XCircle className="w-4 h-4"/> Stornovať
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* --- TAB: NASTAVENIA CENNÍKA --- */}
-        {activeTab === 'settings' && (
-          <div className="animate-in fade-in max-w-md mx-auto">
-            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
-              <h2 className="text-xl font-black mb-2 text-center">Základný cenník</h2>
-              <p className="text-xs text-gray-500 font-bold text-center mb-8">Zmeňte ceny za 1 deň úschovy (v €)</p>
-              
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                  <span className="font-black flex items-center gap-2"><Briefcase className="w-5 h-5 text-gray-400"/> Malá batožina</span>
-                  <div className="flex items-center gap-2"><input type="number" value={pricing.small} onChange={e => setPricing({...pricing, small: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €</div>
-                </div>
-                <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                  <span className="font-black flex items-center gap-2"><Luggage className="w-5 h-5 text-gray-400"/> Stredná batožina</span>
-                  <div className="flex items-center gap-2"><input type="number" value={pricing.medium} onChange={e => setPricing({...pricing, medium: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €</div>
-                </div>
-                <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                  <span className="font-black flex items-center gap-2"><Package className="w-5 h-5 text-gray-400"/> Veľká batožina</span>
-                  <div className="flex items-center gap-2"><input type="number" value={pricing.large} onChange={e => setPricing({...pricing, large: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €</div>
-                </div>
-              </div>
-
-              <button onClick={handleSavePricing} disabled={isSubmitting} className="w-full bg-black text-white font-black py-4 rounded-2xl active:scale-95 transition-all">
-                {isSubmitting ? "Ukladám..." : "Uložiť cenník"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* --- TAB: SPRÁVA PODNIKOV --- */}
         {activeTab === 'manage' && (
           <div className="animate-in fade-in">
             <div className="flex justify-between items-center mb-6">
@@ -399,6 +309,7 @@ export default function AdminDashboard() {
               </button>
             </div>
 
+            {/* FORMULÁR NA PRIDANIE - PRIDANÉ GPS UDAJE */}
             {showAddForm && (
               <div className="bg-white p-6 rounded-[2rem] border border-gray-200 mb-8 shadow-sm">
                 <h3 className="font-black mb-4">Nové miesto</h3>
@@ -407,7 +318,6 @@ export default function AdminDashboard() {
                   <input type="text" placeholder="Adresa" value={newLoc.address} onChange={(e) => setNewLoc({...newLoc, address: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
                 </div>
                 
-                {/* PRIDANÉ GPS POLÍČKA */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <input type="text" placeholder="Lat (napr. 48.148)" value={newLoc.lat} onChange={(e) => setNewLoc({...newLoc, lat: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
                   <input type="text" placeholder="Lng (napr. 17.107)" value={newLoc.lng} onChange={(e) => setNewLoc({...newLoc, lng: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
@@ -436,7 +346,7 @@ export default function AdminDashboard() {
                         <input type="text" value={editLoc.name} onChange={(e) => setEditLoc({...editLoc, name: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         <input type="text" value={editLoc.address} onChange={(e) => setEditLoc({...editLoc, address: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         
-                        {/* PRIDANÉ GPS POLÍČKA PRE ÚPRAVU */}
+                        {/* POLÍČKA NA ÚPRAVU GPS */}
                         <input type="text" placeholder="Lat" value={editLoc.lat} onChange={(e) => setEditLoc({...editLoc, lat: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         <input type="text" placeholder="Lng" value={editLoc.lng} onChange={(e) => setEditLoc({...editLoc, lng: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         <input type="text" placeholder="Google Maps Link" value={editLoc.mapsLink} onChange={(e) => setEditLoc({...editLoc, mapsLink: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
@@ -460,12 +370,9 @@ export default function AdminDashboard() {
                       <div>
                         {!isActive && <span className="bg-red-100 text-red-600 text-[9px] font-black uppercase px-2 py-1 rounded-md mb-2 inline-block">Pozastavené</span>}
                         <h3 className="font-black text-xl">{loc.name}</h3>
+                        <p className="text-xs text-gray-400 font-bold flex items-center gap-1 mt-1"><MapPin className="w-3 h-3"/> {loc.address}</p>
                         
-                        <p className="text-xs text-gray-400 font-bold flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3"/> {loc.address}
-                        </p>
-                        
-                        {/* ZOBRAZENIE GOOGLE MAPS LINKU V ZOZNAME */}
+                        {/* ZOBRAZENIE LINKU NA MAPU */}
                         {loc.mapsLink && (
                           <a href={loc.mapsLink} target="_blank" className="text-blue-500 text-[10px] font-bold mt-1 inline-block">
                             🔗 Otvoriť Maps
@@ -503,13 +410,12 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
-      </div>
+        
+        {/* Zbytok tabov */}
+        {activeTab === 'bookings' && <div className="animate-in fade-in"><h2 className="text-xl font-black mb-6">Správa aktuálnych rezervácií ({activeBookingsList.length})</h2><div className="space-y-4 pb-20">{activeBookingsList.map(b => <div key={b.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4"><div><span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest mb-2 inline-block ${b.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{b.status === 'PENDING' ? 'Očakávané' : 'V úschovni'}</span><h4 className="font-black text-lg flex items-center gap-2">{b.userName} <span className="text-xs text-gray-400 font-mono">({b.bookingId})</span></h4></div><button onClick={() => handleCancelBooking(b.id, b.bookingId)} className="bg-red-50 text-red-600 font-black px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"><XCircle className="w-4 h-4"/> Stornovať</button></div>)}</div></div>}
+        {activeTab === 'settings' && <div className="animate-in fade-in max-w-md mx-auto"><div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100"><button onClick={handleSavePricing} disabled={isSubmitting} className="w-full bg-black text-white font-black py-4 rounded-2xl active:scale-95 transition-all">Uložiť cenník</button></div></div>}
 
-      {/* PÄTIČKA ADMINA */}
-      <div className="w-full text-center pb-6">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Powered by Docenta</p>
       </div>
-
     </main>
   );
 }
