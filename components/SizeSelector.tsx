@@ -17,7 +17,7 @@ const SIZES = [
     label: 'Stredná batožina', 
     price: 3, 
     icon: Briefcase, 
-    desc: 'Palubný kufor (55x40x20 cm)' 
+    desc: 'Menší cestovný kufor (55x40x20 cm)' 
   },
   { 
     id: 'large', 
