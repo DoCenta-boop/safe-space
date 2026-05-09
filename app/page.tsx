@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapPin, Plus, ArrowLeft, Briefcase, Luggage, Package, Loader2 } from "lucide-react";
-import LocationSelector, { Location, MOCK_LOCATIONS } from "../components/LocationSelector";
+import LocationSelector, { Location } from "../components/LocationSelector";
 import SizeSelector, { SelectedLuggage } from "../components/SizeSelector";
 import UserDetailsForm from "../components/UserDetailsForm";
 import CameraCapture from "../components/CameraCapture";
 import ReservationTicket from "../components/ReservationTicket";
-import { createBooking } from "../lib/bookingService";
+import { createBooking, getLocations } from "../lib/bookingService";
 
 export default function Home() {
   const [step, setStep] = useState(0); 
+  const [locations, setLocations] = useState<Location[]>([]); // Skladujeme podniky z DB
+  const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedLuggage[]>([]);
   const [bookingDays, setBookingDays] = useState(1);
@@ -20,6 +22,18 @@ export default function Home() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Načítanie podnikov z databázy pri štarte aplikácie
+  useEffect(() => {
+    async function loadData() {
+      const result = await getLocations();
+      if (result.success && result.data) {
+        setLocations(result.data as Location[]);
+      }
+      setIsLoadingLocations(false);
+    }
+    loadData();
+  }, []);
 
   const handleLocationSelect = (location: Location) => {
     setSelectedLocation(location);
@@ -57,7 +71,7 @@ export default function Home() {
           totalPrice: totalPrice,
           locationId: selectedLocation.id,
         },
-        capturedImages // POSIELAME FOTKY DO STORAGE
+        capturedImages // Posielame fotky do storage
       );
 
       if (result.success && result.bookingId) {
@@ -76,10 +90,12 @@ export default function Home() {
 
   return (
     <main className="relative h-[100dvh] w-full bg-gray-100 flex flex-col overflow-hidden font-sans text-black">
-      {/* MAPA A ŠPENDLÍKY */}
+      {/* MAPA A ŠPENDLÍKY Z DATABÁZY */}
       <div className="flex-1 relative bg-[#e5e3df] overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #ffffff 2px, transparent 2px)', backgroundSize: '40px 40px' }}></div>
-        {MOCK_LOCATIONS.map((loc) => {
+        
+        {/* Ak sa podniky načítavajú, neukážeme nič. Inak vykreslíme mapu. */}
+        {!isLoadingLocations && locations.map((loc) => {
           const sFree = loc.capacities.small.max - loc.capacities.small.occupied;
           const mFree = loc.capacities.medium.max - loc.capacities.medium.occupied;
           const lFree = loc.capacities.large.max - loc.capacities.large.occupied;
@@ -107,8 +123,19 @@ export default function Home() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <h2 className="text-3xl font-black mb-2 text-black tracking-tight">Kam s batožinou?</h2>
             <p className="text-gray-500 mb-8 font-bold">Vyberte si miesto na mape a bezpečne si odložte veci.</p>
-            <button onClick={() => setStep(1)} className="w-full bg-black text-white font-black text-lg py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform shadow-xl shadow-black/10">
-              <Plus className="w-7 h-7" /> Nová rezervácia
+            
+            <button 
+              onClick={() => setStep(1)} 
+              disabled={isLoadingLocations || locations.length === 0}
+              className="w-full bg-black text-white font-black text-lg py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform shadow-xl shadow-black/10 disabled:bg-gray-400"
+            >
+              {isLoadingLocations ? (
+                <><Loader2 className="w-6 h-6 animate-spin" /> Načítavam...</>
+              ) : locations.length === 0 ? (
+                "Žiadne dostupné podniky"
+              ) : (
+                <><Plus className="w-7 h-7" /> Nová rezervácia</>
+              )}
             </button>
           </div>
         )}
@@ -119,7 +146,8 @@ export default function Home() {
           </button>
         )}
 
-        {step === 1 && <div className="animate-in fade-in"><LocationSelector onSelect={handleLocationSelect} /></div>}
+        {/* POZOR: Posielame načítané locations do selektora */}
+        {step === 1 && <div className="animate-in fade-in"><LocationSelector locations={locations} onSelect={handleLocationSelect} /></div>}
         {step === 2 && selectedLocation && <div className="animate-in fade-in"><SizeSelector location={selectedLocation} onNext={handleSizeSelection} /></div>}
         
         {step === 3 && (

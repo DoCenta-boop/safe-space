@@ -7,39 +7,26 @@ export type Location = {
   name: string; 
   address: string; 
   capacities: { small: SizeCapacity; medium: SizeCapacity; large: SizeCapacity };
-  mapPosition: { top: string; left: string }; // Pre simuláciu mapy
+  mapPosition: { top: string; left: string }; 
 };
 
-export const MOCK_LOCATIONS: Location[] = [
-  { 
-    id: 'L1', name: 'Kaviareň Centrum', address: 'Hlavné námestie 4', 
-    capacities: { small: { max: 10, occupied: 8 }, medium: { max: 5, occupied: 5 }, large: { max: 2, occupied: 1 } },
-    mapPosition: { top: '30%', left: '40%' }
-  },
-  { 
-    id: 'L2', name: 'Hotel Bratislava', address: 'Štefánikova 12', 
-    capacities: { small: { max: 20, occupied: 5 }, medium: { max: 15, occupied: 10 }, large: { max: 10, occupied: 2 } },
-    mapPosition: { top: '60%', left: '60%' }
-  },
-  { 
-    id: 'L3', name: 'Mini Potraviny', address: 'Obchodná 1', 
-    capacities: { small: { max: 5, occupied: 5 }, medium: { max: 2, occupied: 2 }, large: { max: 0, occupied: 0 } },
-    mapPosition: { top: '20%', left: '70%' }
-  },
-];
-
 type Props = {
+  locations: Location[];
   onSelect: (location: Location) => void;
 };
 
-export default function LocationSelector({ onSelect }: Props) {
+export default function LocationSelector({ locations, onSelect }: Props) {
+  if (!locations || locations.length === 0) {
+    return <div className="p-4 text-center text-gray-500 font-bold">Žiadne dostupné podniky.</div>;
+  }
+
   return (
     <div className="w-full">
-      <h3 className="text-xl font-bold mb-2 text-gray-800">Dostupné podniky v okolí</h3>
-      <p className="text-gray-500 text-sm mb-6">Vyber si miesto pre svoju batožinu.</p>
+      <h3 className="text-xl font-black mb-2 text-black">Dostupné podniky v okolí</h3>
+      <p className="text-gray-500 text-sm mb-6 font-bold">Vyber si miesto pre svoju batožinu.</p>
       
       <div className="space-y-3">
-        {MOCK_LOCATIONS.map((loc) => {
+        {locations.map((loc) => {
           const sFree = loc.capacities.small.max - loc.capacities.small.occupied;
           const mFree = loc.capacities.medium.max - loc.capacities.medium.occupied;
           const lFree = loc.capacities.large.max - loc.capacities.large.occupied;
@@ -50,35 +37,35 @@ export default function LocationSelector({ onSelect }: Props) {
               key={loc.id}
               onClick={() => !isCompletelyFull && onSelect(loc)}
               disabled={isCompletelyFull}
-              className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex flex-col gap-3 ${
-                isCompletelyFull ? 'bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed' : 'bg-white border-gray-100 active:border-black active:scale-[0.98]'
+              className={`w-full text-left p-4 rounded-[1.5rem] border-2 transition-all flex flex-col gap-3 ${
+                isCompletelyFull ? 'bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed' : 'bg-white border-gray-100 active:border-black active:scale-[0.98] shadow-sm'
               }`}
             >
               <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-full ${isCompletelyFull ? 'bg-gray-200 text-gray-400' : 'bg-black text-white'}`}>
+                <div className={`p-3 rounded-[1rem] ${isCompletelyFull ? 'bg-gray-200 text-gray-400' : 'bg-black text-white shadow-md'}`}>
                   <Store className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-800">{loc.name}</h4>
-                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                  <h4 className="font-black text-black text-lg">{loc.name}</h4>
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1 mt-0.5">
                     <MapPin className="w-3 h-3" /> {loc.address}
                   </p>
                 </div>
               </div>
 
               {/* Ukazovateľ kapacít podniku */}
-              <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+              <div className="flex justify-between items-center bg-gray-50 p-3 rounded-2xl border border-gray-100 mt-1">
                 <div className="flex items-center gap-1.5 text-sm">
                   <Briefcase className="w-4 h-4 text-gray-400" />
-                  <span className={`font-bold ${sFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{sFree}/{loc.capacities.small.max}</span>
+                  <span className={`font-black ${sFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{sFree}/{loc.capacities.small.max}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
                   <Luggage className="w-4 h-4 text-gray-400" />
-                  <span className={`font-bold ${mFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{mFree}/{loc.capacities.medium.max}</span>
+                  <span className={`font-black ${mFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{mFree}/{loc.capacities.medium.max}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
                   <Package className="w-4 h-4 text-gray-400" />
-                  <span className={`font-bold ${lFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{lFree}/{loc.capacities.large.max}</span>
+                  <span className={`font-black ${lFree > 0 ? 'text-green-600' : 'text-red-500'}`}>{lFree}/{loc.capacities.large.max}</span>
                 </div>
               </div>
             </button>

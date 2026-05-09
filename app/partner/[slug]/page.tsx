@@ -1,29 +1,68 @@
 'use client';
 
-import { useState } from 'react';
-import { ScanLine, Search, Package, Check, ArrowRight, Loader2 } from 'lucide-react';
-import QRScanner from '../../components/QRScanner';
-// Importujeme funkcie z našej databázovej služby
-import { getBookingByCode, updateBookingStatus } from '../../lib/bookingService';
+import { useState, useEffect } from 'react';
+import { ScanLine, Search, Package, Check, ArrowRight, Loader2, KeyRound, AlertCircle } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import QRScanner from '../../../components/QRScanner';
+import { getBookingByCode, updateBookingStatus, getLocationBySlug } from '../../../lib/bookingService';
 
 export default function PartnerDashboard() {
+  const params = useParams();
+  const slug = params.slug as string;
+
+  const [location, setLocation] = useState<any | null>(null);
+  const [isLoadingInit, setIsLoadingInit] = useState(true);
+  
+  // Prihlasovanie
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  // Aplikácia
   const [view, setView] = useState<'idle' | 'scanning' | 'details'>('idle');
   const [manualCode, setManualCode] = useState('');
   const [booking, setBooking] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // UPRAVENÉ: Hľadanie presne podľa zadaného kódu (bez PB-)
+  // Načítanie podniku podľa URL slugu
+  useEffect(() => {
+    async function init() {
+      if (!slug) return;
+      const result = await getLocationBySlug(slug);
+      if (result.success && result.data) {
+        setLocation(result.data);
+      }
+      setIsLoadingInit(false);
+    }
+    init();
+  }, [slug]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinInput === location?.pin) {
+      setIsAuthenticated(true);
+      setLoginError('');
+    } else {
+      setLoginError('Nesprávny PIN kód');
+      setPinInput('');
+    }
+  };
+
   const handleSearch = async (code: string) => {
     if (code.length < 6) return;
-    
     setIsLoading(true);
     
-    // Hľadáme kód presne tak, ako ho personál zadal (prevedený na veľké písmená)
+    // Hľadáme rezerváciu
     const result = await getBookingByCode(code.toUpperCase());
-    
     setIsLoading(false);
 
-    if (result.success) {
+    if (result.success && result.data) {
+      // OVERENIE: Patrí táto rezervácia do tohto podniku?
+      // POUŽIJEME as any PRE ODSTRÁNENIE TS CHYBY
+      if ((result.data as any).locationId !== location.id) {
+        alert("Pozor! Táto batožina je rezervovaná pre iný podnik.");
+        return;
+      }
       setBooking(result.data);
       setView('details');
     } else {
@@ -33,10 +72,9 @@ export default function PartnerDashboard() {
 
   const handleAction = async () => {
     if (!booking) return;
-    
     setIsLoading(true);
-    const newStatus = booking.status === 'PENDING' ? 'STORED' : 'COMPLETED';
     
+    const newStatus = booking.status === 'PENDING' ? 'STORED' : 'COMPLETED';
     const result = await updateBookingStatus(booking.id, newStatus);
     
     setIsLoading(false);
@@ -56,21 +94,78 @@ export default function PartnerDashboard() {
     }
   };
 
+  if (isLoadingInit) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50">
+        <Loader2 className="w-10 h-10 animate-spin text-black mb-4" />
+        <p className="font-bold text-gray-500 uppercase tracking-widest text-sm">Načítavam...</p>
+      </div>
+    );
+  }
+
+  // Ak sa zadala zlá URL a podnik neexistuje
+  if (!location) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-red-50 p-6 text-center">
+        <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+        <h1 className="text-2xl font-black text-black mb-2">Podnik nebol nájdený</h1>
+        <p className="text-red-700 font-bold">Skontrolujte si adresu odkazu (URL).</p>
+      </div>
+    );
+  }
+
+  // OBRAZOVKA PRIHLÁSENIA (PIN)
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-[100dvh] bg-gray-50 flex flex-col items-center justify-center p-6 font-sans">
+        <div className="w-full max-w-md bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <KeyRound className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-black text-black mb-2">{location.name}</h1>
+          <p className="text-gray-500 text-sm font-bold mb-8">Zadajte 6-miestny prístupový PIN.</p>
+
+          <form onSubmit={handleLogin}>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              placeholder="••••••"
+              className="w-full text-center text-4xl tracking-[0.5em] font-mono font-black py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none focus:border-black mb-4 text-black placeholder:text-gray-300"
+            />
+            {loginError && <p className="text-red-500 font-bold text-sm mb-4">{loginError}</p>}
+            <button 
+              type="submit" 
+              disabled={pinInput.length !== 6}
+              className="w-full bg-black text-white font-black text-lg py-5 rounded-2xl active:scale-95 transition-transform disabled:opacity-30"
+            >
+              Vstúpiť do portálu
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  // HLAVNÁ APLIKÁCIA PRE PERSONÁL (po prihlásení)
   return (
     <main className="min-h-[100dvh] bg-gray-100 flex flex-col p-6 font-sans text-black">
-      
       <header className="mb-8 mt-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-black tracking-tight">Kaviareň Centrum</h1>
-          <p className="text-gray-500 font-bold text-sm uppercase tracking-wider">Partnerský portál</p>
+          <h1 className="text-2xl font-black text-black tracking-tight">{location.name}</h1>
+          <p className="text-gray-500 font-bold text-[10px] uppercase tracking-widest">Partnerský portál</p>
         </div>
-        <div className="bg-black text-white w-12 h-12 rounded-2xl flex items-center justify-center font-black shadow-lg">
-          KC
-        </div>
+        <button 
+          onClick={() => setIsAuthenticated(false)} 
+          className="bg-gray-200 text-gray-500 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black hover:text-white transition-colors"
+        >
+          Odhlásiť
+        </button>
       </header>
 
       <div className="flex-1 flex flex-col">
-        
         {view === 'idle' && (
           <div className="animate-in fade-in flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
             <button 
@@ -116,7 +211,6 @@ export default function PartnerDashboard() {
 
         {view === 'details' && booking && (
           <div className="animate-in slide-in-from-bottom-8 duration-300 flex-1 flex flex-col">
-            
             <div className="bg-white rounded-[2.5rem] p-8 shadow-xl mb-6 border border-gray-100">
               <div className="flex justify-between items-start mb-8 border-b border-gray-100 pb-6">
                 <div>
@@ -143,7 +237,6 @@ export default function PartnerDashboard() {
                 </div>
               </div>
 
-              {/* Fotografie z databázy (ak existujú) */}
               {booking.images && booking.images.length > 0 && (
                 <>
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 text-center">Fotografie pre kontrolu</p>
@@ -185,10 +278,8 @@ export default function PartnerDashboard() {
                 Zrušiť a späť
               </button>
             </div>
-
           </div>
         )}
-
       </div>
     </main>
   );

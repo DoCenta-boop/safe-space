@@ -90,9 +90,22 @@ export async function addLocation(locationData: any) {
     // Generovanie 6-miestneho PINu (iba čísla) pre partner login
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // Generovanie unikátneho URL slugu (bez diakritiky, medzery na pomlčky + náhodné znaky)
+    const baseSlug = locationData.name
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Odstráni diakritiku
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-') // Nahradí medzery a znaky pomlčkami
+      .replace(/-+/g, '-') // Odstráni viacero pomlčiek za sebou
+      .replace(/^-|-$/g, ''); // Odstráni pomlčky na začiatku a konci
+    
+    // Pridáme 6 náhodných znakov pre absolútnu unikátnosť
+    const randomChars = Math.random().toString(36).substring(2, 8);
+    const slug = `${baseSlug}-${randomChars}`;
+
     const newDoc = {
       ...locationData,
       pin: pin,
+      slug: slug, // Uložíme vygenerovaný slug do databázy
       createdAt: serverTimestamp()
     };
 
@@ -101,7 +114,8 @@ export async function addLocation(locationData: any) {
     return { 
       success: true, 
       id: docRef.id,
-      pin: pin
+      pin: pin,
+      slug: slug // Vraciame slug späť pre zobrazenie v Admine
     };
   } catch (error) {
     console.error("Chyba pri pridávaní podniku:", error);
@@ -123,5 +137,21 @@ export async function getLocations() {
   } catch (error) {
     console.error("Chyba pri načítavaní podnikov:", error);
     return { success: false, data: [] };
+  }
+}
+
+// Nová funkcia na načítanie konkrétneho podniku podľa URL slugu
+export async function getLocationBySlug(slug: string) {
+  try {
+    const q = query(collection(db, "locations"), where("slug", "==", slug), limit(1));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) return { success: false };
+    
+    const doc = querySnapshot.docs[0];
+    return { success: true, data: { id: doc.id, ...doc.data() } };
+  } catch (error) {
+    console.error("Chyba pri načítavaní podniku podľa slugu:", error);
+    return { success: false };
   }
 }

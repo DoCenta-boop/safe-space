@@ -1,15 +1,16 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Store, Plus, MapPin, Shield, Activity, Briefcase, Luggage, Package, KeyRound, Loader2 } from 'lucide-react';
-// Importujeme databázové funkcie
+import { Store, Plus, MapPin, Shield, Activity, Briefcase, Luggage, Package, KeyRound, Loader2, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { addLocation, getLocations } from '../../lib/bookingService';
+import Link from 'next/link';
 
 export type SizeCapacity = { max: number; occupied: number };
 export type Location = { 
   id: string; 
   name: string; 
   address: string; 
-  pin?: string; // Pridané pole pre PIN
+  pin?: string; 
+  slug?: string; // Pridané pole pre slug
   capacities: { small: SizeCapacity; medium: SizeCapacity; large: SizeCapacity };
   mapPosition: { top: string; left: string }; 
 };
@@ -22,7 +23,6 @@ export default function AdminDashboard() {
   
   const [newLoc, setNewLoc] = useState({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2 });
 
-  // Načítanie skutočných podnikov z databázy po zapnutí stránky
   useEffect(() => {
     async function loadData() {
       const result = await getLocations();
@@ -34,7 +34,6 @@ export default function AdminDashboard() {
     loadData();
   }, []);
 
-  // Vytvorenie nového podniku a zápis do databázy
   const handleAddLocation = async () => {
     if (!newLoc.name || !newLoc.address) {
       alert("Vyplňte názov a adresu podniku.");
@@ -51,22 +50,22 @@ export default function AdminDashboard() {
         medium: { max: newLoc.mediumCap, occupied: 0 },
         large: { max: newLoc.largeCap, occupied: 0 }
       },
-      mapPosition: { top: '50%', left: '50%' } // Neskôr môžeme pridať výber bodu na mape
+      mapPosition: { top: '50%', left: '50%' } 
     };
 
     const result = await addLocation(locationToSave);
 
     if (result.success) {
-      // Pridanie nového podniku hneď aj do zobrazenia (vrátane vygenerovaného PINu)
       const newlyAdded: Location = {
         id: result.id as string,
         ...locationToSave,
-        pin: result.pin as string
+        pin: result.pin as string,
+        slug: result.slug as string
       };
       setLocations([...locations, newlyAdded]);
       setShowAddForm(false);
       setNewLoc({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2 });
-      alert(`Podnik vytvorený!\nVygenerovaný PIN pre prihlásenie personálu je: ${result.pin}`);
+      alert(`Podnik vytvorený!\nOdkaz: /partner/${newlyAdded.slug}\nPIN: ${newlyAdded.pin}`);
     } else {
       alert("Chyba pri vytváraní podniku.");
     }
@@ -78,7 +77,6 @@ export default function AdminDashboard() {
     acc + loc.capacities.small.occupied + loc.capacities.medium.occupied + loc.capacities.large.occupied, 0
   );
 
-  // Zobrazenie načítavania
   if (isLoading) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50">
@@ -147,12 +145,11 @@ export default function AdminDashboard() {
           </div>
 
           <button onClick={handleAddLocation} disabled={isSubmitting} className="w-full bg-blue-600 text-white font-black py-4 rounded-xl active:scale-95 transition-transform uppercase tracking-widest text-sm flex items-center justify-center gap-2">
-            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Uložiť a generovať PIN"}
+            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Uložiť a generovať URL/PIN"}
           </button>
         </div>
       )}
 
-      {/* Zoznam podnikov zo skutočnej databázy */}
       {locations.length === 0 ? (
         <div className="text-center py-10 text-gray-400 font-bold border-2 border-dashed border-gray-200 rounded-3xl mt-4">
           Nemáte vytvorené žiadne podniky.
@@ -168,24 +165,38 @@ export default function AdminDashboard() {
             return (
               <div key={loc.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
                 <div className="flex justify-between items-start mb-4">
-                  <div>
+                  <div className="w-full">
                     <h3 className="font-black text-black text-xl mb-1">{loc.name}</h3>
-                    <p className="text-xs text-gray-500 flex items-center gap-1 font-bold"><MapPin className="w-3 h-3" /> {loc.address}</p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1 font-bold mb-4"><MapPin className="w-3 h-3" /> {loc.address}</p>
                     
-                    {/* Zobrazenie PIN kódu iba v Admine */}
-                    {loc.pin && (
-                      <div className="mt-3 flex items-center gap-2 bg-yellow-50 text-yellow-800 px-3 py-1.5 rounded-lg border border-yellow-200 w-fit">
-                        <KeyRound className="w-4 h-4" />
-                        <span className="text-xs font-bold uppercase tracking-wider">PIN:</span>
-                        <span className="font-black font-mono tracking-widest text-lg">{loc.pin}</span>
+                    {/* Zobrazenie Prístupových údajov pre Partnera */}
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-4 w-full">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Prístup pre personál</p>
+                      
+                      <div className="flex flex-col gap-2">
+                        {loc.slug && (
+                          <Link href={`/partner/${loc.slug}`} target="_blank" className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 hover:border-black transition-colors group">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <LinkIcon className="w-4 h-4 text-blue-500 shrink-0" />
+                              <span className="font-mono text-xs text-blue-600 truncate">/partner/{loc.slug}</span>
+                            </div>
+                            <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-black shrink-0" />
+                          </Link>
+                        )}
+
+                        {loc.pin && (
+                          <div className="flex items-center justify-between bg-yellow-50 p-3 rounded-xl border border-yellow-200">
+                            <div className="flex items-center gap-2">
+                              <KeyRound className="w-4 h-4 text-yellow-600" />
+                              <span className="text-xs font-bold text-yellow-800">PIN:</span>
+                            </div>
+                            <span className="font-black font-mono tracking-widest text-lg text-yellow-900">{loc.pin}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+
                   </div>
-                  {isCompletelyFull ? (
-                    <span className="bg-red-100 text-red-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">Plné</span>
-                  ) : (
-                    <span className="bg-green-100 text-green-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">Aktívne</span>
-                  )}
                 </div>
 
                 {/* Ukazovatele kapacít */}
@@ -211,7 +222,6 @@ export default function AdminDashboard() {
                     </div>
                   ))}
                 </div>
-
               </div>
             );
           })}
