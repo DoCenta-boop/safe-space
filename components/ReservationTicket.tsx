@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { Download, Share2, CheckCircle2, Loader2, Ticket } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+// ZMENA: Používame QRCodeCanvas namiesto QRCodeSVG pre 100% spoľahlivosť pri exporte
+import { QRCodeCanvas } from 'qrcode.react';
 import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
@@ -19,23 +20,21 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
   const pdfRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Generovanie vysokokvalitného A4 PDF
   const generatePDF = async () => {
     if (!pdfRef.current) return null;
     
     try {
-      // Dáme prehliadaču čas na načítanie všetkých fontov a SVG
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Mierne dlhší čas na načítanie, aby Canvas s QR kódom stihol nabehnúť
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       const node = pdfRef.current;
 
-      // Vygenerujeme fotku zo skrytej A4 šablóny vo vysokom rozlíšení
       const imgData = await toJpeg(node, {
         quality: 1.0,
-        pixelRatio: 2, // 2x rozlíšenie pre absolútnu ostrosť textu a QR kódu
+        pixelRatio: 2, // 2x rozlíšenie pre absolútnu ostrosť textu
         backgroundColor: '#ffffff',
-        width: 794,  // Presná šírka A4
-        height: 1123 // Presná výška A4
+        width: 794,  
+        height: 1123 
       });
       
       const pdf = new jsPDF({
@@ -44,13 +43,12 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
         format: 'a4'
       });
 
-      // Vložíme obrázok na celú plochu A4 (210x297 mm)
       pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
       
       return pdf;
     } catch (error: any) {
-      console.error("Chyba generovania:", error);
-      alert("Nepodarilo sa vytvoriť dokument.");
+      console.error("Chyba generovania PDF:", error);
+      alert("Nepodarilo sa vytvoriť dokument. Skúste to prosím znova.");
       return null;
     }
   };
@@ -103,64 +101,72 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
     <div className="w-full flex flex-col items-center relative">
       
       {/* -------------------------------------------------------------
-        SKRYTÁ A4 ŠABLÓNA PRE PDF GENERÁTOR (Vysoká kvalita, nezobrazuje sa na obrazovke) 
+        SKRYTÝ WRAPPER: Obalíme A4 šablónu do neviditeľného rodiča (0x0 overflow hidden).
+        Samotný pdfRef (A4 šablóna) už nemá divoké mínusové súradnice, 
+        vďaka čomu ho prehliadač nezabije a bezpečne ho vykreslí do pamäte.
         -------------------------------------------------------------
       */}
-      <div 
-        ref={pdfRef} 
-        className="absolute bg-white" 
-        style={{ top: '-10000px', left: '-10000px', width: '794px', height: '1123px', padding: '60px', color: '#000' }}
-      >
-        <div className="border-b-4 border-black pb-6 mb-12 flex justify-between items-end">
-          <h1 className="text-6xl font-black uppercase tracking-tight">Safe Space</h1>
-          <p className="text-2xl font-bold text-gray-500 uppercase tracking-widest">Rezervačný lístok</p>
-        </div>
-
-        <div className="flex justify-between items-center mb-16">
-          <div className="w-1/2">
-            <p className="text-xl font-black text-gray-400 uppercase tracking-widest mb-4">Váš tajný kód</p>
-            <h2 className="text-7xl font-black font-mono tracking-widest mb-4">{bookingId}</h2>
-            <p className="text-lg font-bold text-gray-500">Tento kód a QR kód ukážte personálu pri odovzdaní aj vyzdvihnutí batožiny.</p>
+      <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', top: 0, left: 0, pointerEvents: 'none' }}>
+        <div 
+          ref={pdfRef} 
+          className="bg-white" 
+          style={{ width: '794px', height: '1123px', padding: '60px', color: '#000' }}
+        >
+          <div className="border-b-4 border-black pb-6 mb-12 flex justify-between items-end">
+            {/* PRIDANÉ LOGO DOCENTA SPACES */}
+            <div className="flex items-center">
+              <span className="text-5xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
+              <span className="text-5xl font-black text-blue-600 tracking-tighter ml-1.5">SPACES</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-500 uppercase tracking-widest">Rezervačný lístok</p>
           </div>
-          <div className="bg-white p-6 border-4 border-black rounded-3xl">
-            {/* Obrovský a superostrý QR Kód */}
-            <QRCodeSVG value={bookingId} size={250} level="H" />
-          </div>
-        </div>
 
-        <div className="w-full bg-gray-50 rounded-3xl p-10 border-2 border-gray-200">
-          <h3 className="text-3xl font-black uppercase tracking-widest border-b-2 border-gray-200 pb-6 mb-8">Detaily rezervácie</h3>
-          
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Zákazník</span>
-              <span className="text-2xl font-black">{userName}</span>
+          <div className="flex justify-between items-center mb-16">
+            <div className="w-1/2">
+              <p className="text-xl font-black text-gray-400 uppercase tracking-widest mb-4">Váš tajný kód</p>
+              <h2 className="text-7xl font-black font-mono tracking-widest mb-4">{bookingId}</h2>
+              <p className="text-lg font-bold text-gray-500">Tento kód a QR kód ukážte personálu pri odovzdaní aj vyzdvihnutí batožiny.</p>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Telefón</span>
-              <span className="text-2xl font-black">{userPhone || 'Neuvedený'}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">E-mail</span>
-              <span className="text-2xl font-black">{userEmail || 'Neuvedený'}</span>
-            </div>
-            <div className="flex justify-between items-center pt-6 border-t-2 border-gray-200">
-              <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Batožina</span>
-              <span className="text-2xl font-black">{size}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Doba úschovy</span>
-              <span className="text-2xl font-black">{days} {days === 1 ? 'deň' : days < 5 ? 'dni' : 'dní'}</span>
-            </div>
-            <div className="flex justify-between items-center pt-6 border-t-2 border-gray-200">
-              <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Dátum vytvorenia</span>
-              <span className="text-2xl font-black">{formatDate()}</span>
+            <div className="bg-white p-6 border-4 border-black rounded-3xl">
+              {/* CANVAS QR KÓD pre bezchybný export */}
+              <QRCodeCanvas value={bookingId} size={250} level="H" />
             </div>
           </div>
-        </div>
 
-        <div className="absolute bottom-16 left-0 w-full text-center">
-          <p className="text-gray-400 font-bold text-xl uppercase tracking-widest">Ďakujeme, že využívate sieť úschovní Safe Space.</p>
+          <div className="w-full bg-gray-50 rounded-3xl p-10 border-2 border-gray-200">
+            <h3 className="text-3xl font-black uppercase tracking-widest border-b-2 border-gray-200 pb-6 mb-8">Detaily rezervácie</h3>
+            
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Zákazník</span>
+                <span className="text-2xl font-black">{userName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Telefón</span>
+                <span className="text-2xl font-black">{userPhone || 'Neuvedený'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">E-mail</span>
+                <span className="text-2xl font-black">{userEmail || 'Neuvedený'}</span>
+              </div>
+              <div className="flex justify-between items-center pt-6 border-t-2 border-gray-200">
+                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Batožina</span>
+                <span className="text-2xl font-black">{size}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Doba úschovy</span>
+                <span className="text-2xl font-black">{days} {days === 1 ? 'deň' : days < 5 ? 'dni' : 'dní'}</span>
+              </div>
+              <div className="flex justify-between items-center pt-6 border-t-2 border-gray-200">
+                <span className="text-xl text-gray-500 font-bold uppercase tracking-widest">Dátum vytvorenia</span>
+                <span className="text-2xl font-black">{formatDate()}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-16 left-0 w-full text-center">
+            <p className="text-gray-400 font-bold text-xl uppercase tracking-widest">Ďakujeme, že využívate sieť úschovní Safe Space.</p>
+          </div>
         </div>
       </div>
 
@@ -183,7 +189,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
         </div>
 
         <div className="flex justify-center mb-6 bg-white p-4 rounded-3xl border-2 border-dashed border-gray-100">
-          <QRCodeSVG value={bookingId} size={150} level="H" />
+          <QRCodeCanvas value={bookingId} size={150} level="H" />
         </div>
 
         <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 text-center">Váš tajný kód</p>
