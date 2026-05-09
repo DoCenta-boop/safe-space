@@ -1,15 +1,5 @@
 import { db, storage } from './firebase'; 
-import { 
-  collection, 
-  addDoc, 
-  serverTimestamp, 
-  query, 
-  where, 
-  getDocs, 
-  limit,
-  updateDoc,
-  doc 
-} from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, updateDoc, doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage'; 
 
 // --- FUNKCIE PRE REZERVÁCIE ---
@@ -202,5 +192,86 @@ export async function getAllBookings() {
     } catch (error) {
       console.error("Chyba pri načítavaní všetkých rezervácií:", error);
       return { success: false, data: [] };
+    }
+  }
+  // --- FUNKCIE PRE ÚPRAVU A MAZANIE PODNIKOV ---
+
+export async function updateLocationData(id: string, updateData: any) {
+    try {
+      const locRef = doc(db, "locations", id);
+      await updateDoc(locRef, updateData);
+      return { success: true };
+    } catch (error) {
+      console.error("Chyba pri úprave podniku:", error);
+      return { success: false, error };
+    }
+  }
+  
+  export async function deleteLocationData(id: string) {
+    try {
+      await deleteDoc(doc(db, "locations", id));
+      return { success: true };
+    } catch (error) {
+      console.error("Chyba pri mazaní podniku:", error);
+      return { success: false, error };
+    }
+  }
+  
+  export async function resetLocationPin(id: string) {
+    try {
+      const newPin = Math.floor(100000 + Math.random() * 900000).toString();
+      await updateDoc(doc(db, "locations", id), { pin: newPin });
+      return { success: true, newPin };
+    } catch (error) {
+      console.error("Chyba pri resete PINu:", error);
+      return { success: false, error };
+    }
+  }// --- PAUZA / AKTIVÁCIA PODNIKU ---
+export async function toggleLocationActive(id: string, currentStatus: boolean) {
+    try {
+      await updateDoc(doc(db, "locations", id), { isActive: !currentStatus });
+      return { success: true };
+    } catch (error) {
+      console.error("Chyba pri zmene statusu podniku:", error);
+      return { success: false, error };
+    }
+  }
+  
+  // --- STORNO REZERVÁCIE ---
+  export async function cancelBookingStatus(id: string) {
+    try {
+      await updateDoc(doc(db, "bookings", id), { status: 'CANCELLED' });
+      return { success: true };
+    } catch (error) {
+      console.error("Chyba pri stornovaní:", error);
+      return { success: false, error };
+    }
+  }
+  
+  // --- CENNÍK (GLOBÁLNE NASTAVENIA) ---
+  export async function getPricingConfig() {
+    try {
+      const docSnap = await getDoc(doc(db, "settings", "pricing"));
+      if (docSnap.exists()) {
+        return { success: true, data: docSnap.data() };
+      } else {
+        // Ak cenník ešte neexistuje, vytvoríme predvolený
+        const defaultPricing = { small: 5, medium: 7, large: 10 };
+        await setDoc(doc(db, "settings", "pricing"), defaultPricing);
+        return { success: true, data: defaultPricing };
+      }
+    } catch (error) {
+      console.error("Chyba pri načítaní cenníka:", error);
+      return { success: false, data: { small: 5, medium: 7, large: 10 } }; // Fallback
+    }
+  }
+  
+  export async function updatePricingConfig(prices: { small: number, medium: number, large: number }) {
+    try {
+      await setDoc(doc(db, "settings", "pricing"), prices);
+      return { success: true };
+    } catch (error) {
+      console.error("Chyba pri ukladaní cien:", error);
+      return { success: false, error };
     }
   }
