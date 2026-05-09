@@ -70,7 +70,7 @@ export default function Home() {
           items: selectedItems,
           totalPrice: totalPrice,
           locationId: selectedLocation.id,
-          bookingDays: bookingDays, // Pridali sme ukladanie dní do databázy
+          bookingDays: bookingDays, 
         },
         capturedImages 
       );
@@ -89,7 +89,6 @@ export default function Home() {
     }
   };
 
-  // --- VÝPOČET ZHRNUTIA BATOŽINY ---
   const luggageSummary = Object.entries(
     selectedItems.reduce((acc, item) => {
       acc[item.label] = (acc[item.label] || 0) + 1;
@@ -180,24 +179,41 @@ export default function Home() {
           </div>
         )}
 
-        {/* --- KROK 5: FINÁLNY SUMÁR --- */}
+        {/* --- KROK 5: FINÁLNY SUMÁR PRED POTVRDENÍM --- */}
         {step === 5 && (
           <div className="animate-in fade-in flex flex-col items-center text-center">
             <h2 className="text-3xl font-black mb-2 text-black tracking-tight">Skoro hotovo!</h2>
-            <p className="text-gray-500 mb-8 font-bold text-sm">Skontrolujte údaje a potvrďte rezerváciu.</p>
+            <p className="text-gray-500 mb-8 font-bold text-sm">Skontrolujte si prosím svoje údaje.</p>
             
             <div className="bg-gray-50 p-6 rounded-[2rem] w-full mb-8 text-left border-2 border-gray-100 shadow-inner">
-              <div className="flex justify-between mb-4">
+              
+              {/* Osobné údaje */}
+              <div className="mb-4 pb-4 border-b border-gray-200">
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Meno</span>
+                  <span className="font-black text-black text-right">{userData.name}</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Telefón</span>
+                  <span className="font-black text-black text-right">{userData.phone || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">E-mail</span>
+                  <span className="font-black text-black text-right truncate pl-4">{userData.email || '-'}</span>
+                </div>
+              </div>
+
+              {/* Údaje o rezervácii */}
+              <div className="flex justify-between mb-2">
                 <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span>
                 <span className="font-black text-black text-right">{selectedLocation?.name}</span>
               </div>
               
-              <div className="flex justify-between mb-4">
+              <div className="flex justify-between mb-2">
                 <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span>
                 <span className="font-black text-black text-right">{luggageSummary}</span>
               </div>
               
-              {/* NOVÝ RIADOK: DOBA ÚSCHOVY */}
               <div className="flex justify-between mb-4">
                 <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Doba úschovy</span>
                 <span className="font-black text-black text-right">
@@ -228,7 +244,6 @@ export default function Home() {
         {/* --- KROK 6: LÍSTOK --- */}
         {step === 6 && bookingId && (
           <div className="animate-in fade-in">
-            {/* ODOVDZDÁVAME days DO LÍSTKA */}
             <ReservationTicket 
               bookingId={bookingId} 
               userName={userData.name} 
