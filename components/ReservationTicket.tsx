@@ -75,7 +75,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       } else if (navigator.share) {
         await navigator.share({
           title: 'Moja rezervácia Docenta SPACES',
-          text: `Docenta SPACES kód: ${bookingId}\nMeno: ${userName}\nBatožina: ${size}\nDni: ${days}`,
+          text: `Docenta SPACES kód: ${bookingId}\nMeno: ${userName}\nBatožina: ${size}\nPlatnosť: 24 hodín`,
           url: window.location.origin
         });
       } else {
@@ -97,8 +97,6 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       
       {/* -------------------------------------------------------------
         ANTI-LAZY-LOADING HACK PRE MOBILY (Oprava scrollovania)
-        Použitý 'position: fixed' zabezpečí, že tento obrovský prvok 
-        nerozšíri reálnu veľkosť stránky a nespôsobí zasekávanie/horizontálny scroll.
         -------------------------------------------------------------
       */}
       <div style={{ position: 'fixed', top: 0, left: 0, zIndex: -50, opacity: 0.01, pointerEvents: 'none' }}>
@@ -150,8 +148,8 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
                 <span className="text-xl font-black text-black">{size}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Doba úschovy</span>
-                <span className="text-xl font-black text-black">{days} {days === 1 ? 'deň' : days < 5 ? 'dni' : 'dní'}</span>
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Platnosť úschovy</span>
+                <span className="text-xl font-black text-black">24 hodín</span>
               </div>
               <div className="flex justify-between items-center pt-5 border-t border-gray-200">
                 <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Dátum vytvorenia</span>
@@ -197,6 +195,10 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
           <div className="flex justify-between items-center">
             <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Meno</span>
             <span className="font-black text-sm text-black text-right">{userName}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Platnosť</span>
+            <span className="font-black text-sm text-blue-600 text-right">24 hodín</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Batožina</span>

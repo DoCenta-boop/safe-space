@@ -32,7 +32,8 @@ export default function ReservationsView() {
             <Clock className="w-6 h-6 text-black" />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">Zostáva času</p>
+            {/* Zapracovaná informácia o sadzbe */}
+            <p className="text-sm text-gray-500 font-medium">Zostáva času • <span className="font-bold text-blue-600">Sadzba 24h</span></p>
             <p className="font-black text-xl text-gray-800">4h 15m</p>
           </div>
         </div>
@@ -55,7 +56,8 @@ export default function ReservationsView() {
         <div className="bg-white rounded-3xl p-5 border border-gray-100 flex justify-between items-center opacity-70">
           <div>
             <h4 className="font-bold text-gray-800">Hlavná stanica - Boxy</h4>
-            <p className="text-sm text-gray-500 mt-0.5">12. mája 2026 • 2 ks batožiny</p>
+            {/* Zapracovaná informácia o sadzbe */}
+            <p className="text-sm text-gray-500 mt-0.5">12. mája 2026 • 2 ks • Sadzba 24h</p>
           </div>
           <div className="text-right">
             <p className="font-bold text-gray-800">6.00 €</p>
@@ -67,7 +69,8 @@ export default function ReservationsView() {
         <div className="bg-white rounded-3xl p-5 border border-gray-100 flex justify-between items-center opacity-70">
           <div>
             <h4 className="font-bold text-gray-800">Hotel Bratislava</h4>
-            <p className="text-sm text-gray-500 mt-0.5">5. apríla 2026 • 1 ks batožiny</p>
+            {/* Zapracovaná informácia o sadzbe */}
+            <p className="text-sm text-gray-500 mt-0.5">5. apríla 2026 • 1 ks • Sadzba 24h</p>
           </div>
           <div className="text-right">
             <p className="font-bold text-gray-800">2.00 €</p>

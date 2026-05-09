@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Backpack, Briefcase, Luggage, Plus, Minus, CalendarDays } from 'lucide-react';
+// Odstránený CalendarDays, pridané Info
+import { Backpack, Briefcase, Luggage, Plus, Minus, Info } from 'lucide-react';
 import { Location } from './LocationSelector';
 
 const SIZES = [
@@ -37,10 +38,11 @@ type Props = {
 
 export default function SizeSelector({ location, onNext }: Props) {
   const [counts, setCounts] = useState<{ [key: string]: number }>({ small: 0, medium: 0, large: 0 });
-  const [days, setDays] = useState(1);
 
   const totalItemsCount = Object.values(counts).reduce((a, b) => a + b, 0);
-  const totalPrice = SIZES.reduce((total, size) => total + (counts[size.id] * size.price), 0) * days;
+  
+  // Výpočet ceny už nepotrebuje násobenie počtom dní, lebo to je vždy 1 (24 hodín)
+  const totalPrice = SIZES.reduce((total, size) => total + (counts[size.id] * size.price), 0);
 
   const getAvailableForSize = (sizeId: string) => {
     const cap = location.capacities[sizeId as keyof typeof location.capacities];
@@ -60,7 +62,8 @@ export default function SizeSelector({ location, onNext }: Props) {
         items.push({ id: `${size.id}-${i}-${Date.now()}`, typeId: size.id, label: size.label, price: size.price });
       }
     });
-    onNext(items, days, totalPrice);
+    // Natvrdo odošleme 1 deň (24 hodín), aby sa nezbúrala logika zbytku aplikácie
+    onNext(items, 1, totalPrice);
   };
 
   return (
@@ -86,9 +89,9 @@ export default function SizeSelector({ location, onNext }: Props) {
                   </div>
                   <div className="flex flex-col">
                     <div className="font-black text-lg md:text-xl text-black leading-tight">{size.label}</div>
-                    <div className="text-sm font-black text-blue-600 mt-0.5">{size.price} € / deň</div>
+                    {/* Zmena z "deň" na "24h" */}
+                    <div className="text-sm font-black text-blue-600 mt-0.5">{size.price} € / 24h</div>
                     
-                    {/* Zlepšený, väčší a čitateľnejší popis */}
                     <div className="text-xs md:text-sm font-semibold text-gray-500 mt-2 leading-snug max-w-[200px] md:max-w-[240px]">
                       {size.desc}
                     </div>
@@ -117,23 +120,20 @@ export default function SizeSelector({ location, onNext }: Props) {
         })}
       </div>
       
-      <h3 className="text-xl font-black mb-4 text-black font-sans">Na ako dlho?</h3>
-      <div className="flex items-center justify-between p-5 rounded-[2rem] border-2 border-gray-100 bg-white mb-8 shadow-sm">
-        <div className="flex items-center gap-3 font-sans">
-          <div className="p-3 rounded-xl bg-gray-50"><CalendarDays className="w-6 h-6 text-black" /></div>
-          <span className="font-black text-black uppercase text-[10px] tracking-widest">Počet dní</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button onClick={() => setDays(Math.max(1, days - 1))} disabled={days === 1} className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-gray-200 flex items-center justify-center disabled:opacity-30 active:scale-90 transition-transform"><Minus className="w-5 h-5 text-black" /></button>
-          <span className="font-black text-3xl text-black w-8 text-center">{days}</span>
-          <button onClick={() => setDays(days + 1)} className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-black text-white flex items-center justify-center active:scale-90 shadow-md shadow-black/20 transition-transform"><Plus className="w-5 h-5" /></button>
-        </div>
-      </div>
-      
+      {/* Vymenené: Namiesto počtu dní je tu Info hláška a rovno tlačidlo pokračovať */}
       {totalItemsCount > 0 && (
-        <button onClick={handleContinue} className="w-full bg-black text-white font-black py-5 md:py-6 rounded-2xl active:scale-95 transition-transform flex justify-between px-6 font-sans shadow-xl shadow-black/20 text-lg">
-          <span>Pokračovať k údajom</span><span>{totalPrice} €</span>
-        </button>
+        <div className="animate-in fade-in duration-300 w-full">
+          <div className="flex items-center justify-center gap-2 mb-4 px-4 text-gray-400">
+            <Info className="w-4 h-4 shrink-0" />
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-center">
+              Cena je uvedená za odloženie na 24 hodín
+            </p>
+          </div>
+
+          <button onClick={handleContinue} className="w-full bg-black text-white font-black py-5 md:py-6 rounded-2xl active:scale-95 transition-transform flex justify-between px-6 font-sans shadow-xl shadow-black/20 text-lg">
+            <span>Pokračovať k údajom</span><span>{totalPrice} €</span>
+          </button>
+        </div>
       )}
     </div>
   );
