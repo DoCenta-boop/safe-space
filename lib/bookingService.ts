@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db, storage } from './firebase'; // Pridaný import 'storage'
 import { 
   collection, 
   addDoc, 
@@ -10,19 +10,41 @@ import {
   updateDoc,
   doc 
 } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage'; // Importy pre Storage
 
-export async function createBooking(bookingData: any) {
+export async function createBooking(bookingData: any, capturedImages: {id: string, image: string}[]) {
   try {
-    // GENERÁTOR: Úplne náhodných 6 znakov (čísla + písmená)
+    // 1. GENERÁTOR KÓDU (6 znakov)
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let shortId = '';
     for (let i = 0; i < 6; i++) {
       shortId += chars.charAt(Math.floor(Math.random() * chars.length));
     }
 
+    // 2. NAHRATIE FOTIEK DO STORAGE
+    const uploadedImageUrls = [];
+    
+    if (capturedImages && capturedImages.length > 0) {
+      for (let i = 0; i < capturedImages.length; i++) {
+        const imgData = capturedImages[i];
+        
+        // Vytvoríme referenciu (cestu) v Storage, napr: bookings/X7K2P9/photo_0.jpg
+        const imageRef = ref(storage, `bookings/${shortId}/photo_${i}.jpg`);
+        
+        // Nahráme fotku (imgData.image je base64 reťazec z kamery)
+        await uploadString(imageRef, imgData.image, 'data_url');
+        
+        // Získame verejnú URL adresu k práve nahratej fotke
+        const downloadURL = await getDownloadURL(imageRef);
+        uploadedImageUrls.push(downloadURL);
+      }
+    }
+
+    // 3. ULOŽENIE REZERVÁCIE DO DATABÁZY
     const docRef = await addDoc(collection(db, "bookings"), {
       ...bookingData,
-      bookingId: shortId, // Ukladáme čistý 6-miestny kód
+      bookingId: shortId,
+      images: uploadedImageUrls, // Tu priradíme tie URL adresy z cloudu
       status: 'PENDING',
       createdAt: serverTimestamp(),
     });
@@ -34,7 +56,7 @@ export async function createBooking(bookingData: any) {
   }
 }
 
-// Funkcia na hľadanie zostáva rovnaká, len bude hľadať presný 6-miestny kód
+// (Tieto funkcie ostávajú nezmenené)
 export async function getBookingByCode(code: string) {
   try {
     const q = query(

@@ -48,15 +48,17 @@ export default function Home() {
     setIsSubmitting(true);
 
     try {
-      const result = await createBooking({
-        userName: userData.name,
-        userEmail: userData.email,
-        userPhone: userData.phone,
-        items: selectedItems,
-        totalPrice: totalPrice,
-        locationId: selectedLocation.id,
-        // Tu neskôr prepojíme storage pre capturedImages
-      });
+      const result = await createBooking(
+        {
+          userName: userData.name,
+          userEmail: userData.email,
+          userPhone: userData.phone,
+          items: selectedItems,
+          totalPrice: totalPrice,
+          locationId: selectedLocation.id,
+        },
+        capturedImages // POSIELAME FOTKY DO STORAGE
+      );
 
       if (result.success && result.bookingId) {
         setBookingId(result.bookingId);
@@ -74,7 +76,7 @@ export default function Home() {
 
   return (
     <main className="relative h-[100dvh] w-full bg-gray-100 flex flex-col overflow-hidden font-sans text-black">
-      {/* MAPA A ŠPENDLÍKY (bezo zmeny) */}
+      {/* MAPA A ŠPENDLÍKY */}
       <div className="flex-1 relative bg-[#e5e3df] overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #ffffff 2px, transparent 2px)', backgroundSize: '40px 40px' }}></div>
         {MOCK_LOCATIONS.map((loc) => {
