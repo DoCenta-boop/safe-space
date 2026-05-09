@@ -107,7 +107,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
           <QRCodeSVG value={bookingId} size={150} level="H" />
         </div>
 
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 text-center">Váš tajný kód</p>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 text-center">Kód vašej rezervácie</p>
         <h3 className="text-4xl font-black text-black tracking-tight font-mono mb-8 text-center">{bookingId}</h3>
 
         <div className="space-y-4 pt-6 border-t-2 border-gray-100">
