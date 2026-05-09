@@ -155,3 +155,52 @@ export async function getLocationBySlug(slug: string) {
     return { success: false };
   }
 }
+// --- FUNKCIA PRE AKTÍVNE REZERVÁCIE PARTNERA ---
+export async function getActiveBookingsForLocation(locationId: string) {
+    try {
+      // Stiahneme rezervácie len pre konkrétny podnik
+      const q = query(
+        collection(db, "bookings"), 
+        where("locationId", "==", locationId)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      const activeBookings: any[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Vyfiltrujeme len tie, ktoré ešte nie sú COMPLETED (Ukončené)
+        if (data.status === 'PENDING' || data.status === 'STORED') {
+          activeBookings.push({ id: doc.id, ...data });
+        }
+      });
+  
+      // Zoradíme ich tak, aby najnovšie boli hore
+      activeBookings.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis() || 0;
+        const timeB = b.createdAt?.toMillis() || 0;
+        return timeB - timeA;
+      });
+      
+      return { success: true, data: activeBookings };
+    } catch (error) {
+      console.error("Chyba pri načítavaní aktívnych rezervácií:", error);
+      return { success: false, data: [] };
+    }
+  }
+  // --- FUNKCIA PRE ADMIN ŠTATISTIKY ---
+export async function getAllBookings() {
+    try {
+      const q = query(collection(db, "bookings"));
+      const querySnapshot = await getDocs(q);
+      
+      const bookings: any[] = [];
+      querySnapshot.forEach((doc) => {
+        bookings.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return { success: true, data: bookings };
+    } catch (error) {
+      console.error("Chyba pri načítavaní všetkých rezervácií:", error);
+      return { success: false, data: [] };
+    }
+  }
