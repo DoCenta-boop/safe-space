@@ -76,13 +76,25 @@ export default function AdminDashboard() {
   const totalCompleted = validBookings.filter(b => b.status === 'COMPLETED').length;
   const avgDays = validBookings.length > 0 ? (validBookings.reduce((sum, b) => sum + (Number(b.bookingDays) || 1), 0) / validBookings.length).toFixed(1) : 0;
 
+  // Analýza veľkostí (Robustné počítanie)
   let sizeStats = { received: { small: 0, medium: 0, large: 0 }, completed: { small: 0, medium: 0, large: 0 } };
+  
   validBookings.forEach(b => {
     b.items?.forEach((item: any) => {
-      const sId = item.id;
-      if (sId === 'small') sizeStats.received.small++; else if (sId === 'medium') sizeStats.received.medium++; else if (sId === 'large') sizeStats.received.large++;
+      const str = String(item.id || item.label || '').toLowerCase();
+      
+      let isSmall = str.includes('small') || str.includes('mal');
+      let isMedium = str.includes('medium') || str.includes('stred');
+      let isLarge = str.includes('large') || str.includes('vel') || str.includes('veľ');
+
+      if (isSmall) sizeStats.received.small++; 
+      else if (isMedium) sizeStats.received.medium++; 
+      else if (isLarge) sizeStats.received.large++;
+
       if (b.status === 'COMPLETED') {
-        if (sId === 'small') sizeStats.completed.small++; else if (sId === 'medium') sizeStats.completed.medium++; else if (sId === 'large') sizeStats.completed.large++;
+        if (isSmall) sizeStats.completed.small++; 
+        else if (isMedium) sizeStats.completed.medium++; 
+        else if (isLarge) sizeStats.completed.large++;
       }
     });
   });
@@ -92,7 +104,14 @@ export default function AdminDashboard() {
     const rows = filteredBookings.map(b => {
       const date = b.createdAt ? new Date(b.createdAt.seconds * 1000).toLocaleDateString('sk-SK') : 'Neznámy';
       let s = 0, m = 0, l = 0;
-      b.items?.forEach((i: any) => { if (i.id === 'small') s++; else if (i.id === 'medium') m++; else if (i.id === 'large') l++; });
+      
+      b.items?.forEach((item: any) => { 
+        const str = String(item.id || item.label || '').toLowerCase();
+        if (str.includes('small') || str.includes('mal')) s++; 
+        else if (str.includes('medium') || str.includes('stred')) m++; 
+        else if (str.includes('large') || str.includes('vel') || str.includes('veľ')) l++; 
+      });
+      
       return [ b.bookingId, `"${b.userName}"`, `"${b.userPhone || ''}"`, b.totalPrice, b.items?.length || 0, s, m, l, b.status, date ].join(',');
     });
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');

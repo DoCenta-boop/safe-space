@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Download, Share2, CheckCircle2, Loader2, Ticket } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -21,10 +22,12 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
     if (!ticketRef.current) return null;
     
     try {
+      // Zabezpečíme, že sa to správne vyrenderuje aj na mobile
       const canvas = await html2canvas(ticketRef.current, {
-        scale: 3, // Vyššia kvalita obrázka
+        scale: 2, 
         useCORS: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        logging: false
       });
       
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
@@ -41,6 +44,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       return pdf;
     } catch (error) {
       console.error("Chyba pri generovaní PDF:", error);
+      alert("Nepodarilo sa vytvoriť PDF. Skúste to znova.");
       return null;
     }
   };
@@ -55,31 +59,25 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
     setIsGenerating(false);
   };
 
-  // 2. Tlačidlo: ZDIEĽAŤ (Web Share API)
+  // 2. Tlačidlo: ZDIEĽAŤ
   const handleShare = async () => {
     setIsGenerating(true);
-    const pdf = await generatePDF();
     
-    if (pdf) {
-      // Vytvoríme reálny súbor z PDF
-      const pdfBlob = pdf.output('blob');
-      const file = new File([pdfBlob], `SafeSpace-Rezervacia-${bookingId}.pdf`, { type: 'application/pdf' });
-
-      // Otestujeme, či zariadenie podporuje zdieľanie súborov
-      if (navigator.share && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            title: 'Moja rezervácia batožiny',
-            text: `Ahoj, tu je môj lístok od batožiny. Kód rezervácie je ${bookingId}.`,
-            files: [file]
-          });
-        } catch (error) {
-          console.log("Zdieľanie bolo zrušené alebo zlyhalo.", error);
-        }
+    try {
+      // Otestujeme podporu natívneho zdieľania
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Moja rezervácia batožiny',
+          text: `Ahoj, tu je môj lístok do Safe Space. Kód rezervácie je: ${bookingId}`,
+          url: window.location.origin
+        });
       } else {
-        alert("Vaše zariadenie bohužiaľ nepodporuje priame zdieľanie súborov. Prosím, stiahnite si PDF.");
+        alert("Vaše zariadenie nepodporuje priame zdieľanie.");
       }
+    } catch (error) {
+      console.log("Zdieľanie zrušené alebo zlyhalo.", error);
     }
+    
     setIsGenerating(false);
   };
 
@@ -94,34 +92,37 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       {/* LÍSTOK, KTORÝ SA BUDE TLAČIŤ DO PDF */}
       <div 
         ref={ticketRef} 
-        className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl shadow-black/10 border border-gray-100 relative overflow-hidden mb-8"
+        className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-xl border border-gray-200 relative overflow-hidden mb-8"
       >
         <div className="absolute top-0 left-0 w-full h-3 bg-black"></div>
-        <div className="flex items-center gap-3 mb-8 mt-2">
-          <Ticket className="w-6 h-6 text-black" />
-          <span className="font-black tracking-widest uppercase text-xs">Safe Space Ticket</span>
+        <div className="flex items-center justify-between mb-8 mt-2">
+          <div className="flex items-center gap-2">
+            <Ticket className="w-6 h-6 text-black" />
+            <span className="font-black tracking-widest uppercase text-xs">Safe Space</span>
+          </div>
         </div>
 
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Váš tajný kód</p>
-        <h3 className="text-5xl font-black text-black tracking-tight font-mono mb-8">{bookingId}</h3>
+        {/* VRÁTENÝ QR KÓD */}
+        <div className="flex justify-center mb-6 bg-white p-4 rounded-3xl border-2 border-dashed border-gray-100">
+          <QRCodeSVG value={bookingId} size={150} level="H" />
+        </div>
 
-        <div className="space-y-4 pt-6 border-t-2 border-dashed border-gray-200">
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 text-center">Váš tajný kód</p>
+        <h3 className="text-4xl font-black text-black tracking-tight font-mono mb-8 text-center">{bookingId}</h3>
+
+        <div className="space-y-4 pt-6 border-t-2 border-gray-100">
           <div className="flex justify-between items-center">
             <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Meno</span>
             <span className="font-black text-sm text-black">{userName}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Počet</span>
+            <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Batožina</span>
             <span className="font-black text-sm text-black">{size}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Email</span>
-            <span className="font-black text-sm text-black truncate max-w-[150px]">{userEmail}</span>
           </div>
         </div>
       </div>
 
-      {/* AKČNÉ TLAČIDLÁ (Tieto sa do PDF nedostanú, sú mimo ticketRef) */}
+      {/* AKČNÉ TLAČIDLÁ */}
       <div className="flex gap-4 w-full">
         <button 
           onClick={handleDownload} 
