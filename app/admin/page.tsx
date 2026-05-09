@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Store, Plus, MapPin, Shield, Activity, Briefcase, Luggage, Package, KeyRound, Loader2, Link as LinkIcon, ExternalLink, BarChart3, Download, Lock, Check } from 'lucide-react';
 import { addLocation, getLocations, getAllBookings } from '../../lib/bookingService';
+// Importujeme našu bezpečnú funkciu
+import { verifyAdmin } from '../../lib/auth';
 import Link from 'next/link';
 
 export type SizeCapacity = { max: number; occupied: number };
@@ -12,16 +14,13 @@ export type Location = {
   mapPosition: { top: string; left: string }; 
 };
 
-// --- TVOJE PRIHLASOVACIE ÚDAJE DO ADMINU ---
-const ADMIN_USER = "tomas";
-const ADMIN_PASS = "admin123"; 
-
 export default function AdminDashboard() {
   // Autentifikácia
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false); // Nový stav pre loading tlačidla prihlásenia
 
   // Dáta
   const [locations, setLocations] = useState<Location[]>([]);
@@ -36,9 +35,8 @@ export default function AdminDashboard() {
 
   // Filtre pre štatistiky
   const [filterLocation, setFilterLocation] = useState<string>('ALL');
-  const [filterPeriod, setFilterPeriod] = useState<string>('ALL'); // ALL, MONTH, WEEK
+  const [filterPeriod, setFilterPeriod] = useState<string>('ALL');
 
-  // Načítanie dát po prihlásení
   const loadData = async () => {
     setIsLoading(true);
     const [locResult, bookResult] = await Promise.all([getLocations(), getAllBookings()]);
@@ -47,24 +45,30 @@ export default function AdminDashboard() {
     setIsLoading(false);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  // BEZPEČNÉ PRIHLASOVANIE CEZ SERVER ACTION
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
+    setIsLoggingIn(true);
+    setLoginError('');
+    
+    // Pošleme údaje na server na overenie
+    const isValid = await verifyAdmin(username, password);
+
+    if (isValid) {
       setIsAuthenticated(true);
-      setLoginError('');
-      loadData(); // Načítaj dáta až keď je prihlásený
+      loadData();
     } else {
       setLoginError('Nesprávne meno alebo heslo');
     }
+    
+    setIsLoggingIn(false);
   };
 
   // --- LOGIKA PRE ŠTATISTIKY ---
   const getFilteredBookings = () => {
     return bookings.filter(b => {
-      // 1. Filter podľa podniku
       if (filterLocation !== 'ALL' && b.locationId !== filterLocation) return false;
       
-      // 2. Filter podľa obdobia
       if (filterPeriod !== 'ALL' && b.createdAt) {
         const bookingDate = new Date(b.createdAt.seconds * 1000);
         const now = new Date();
@@ -87,12 +91,22 @@ export default function AdminDashboard() {
   const avgDays = filteredBookings.length > 0 ? (filteredBookings.reduce((sum, b) => sum + (Number(b.bookingDays) || 1), 0) / filteredBookings.length).toFixed(1) : 0;
   
   // Analýza veľkostí
-  let sizeStats = { small: 0, medium: 0, large: 0 };
+  let stats = {
+    received: { small: 0, medium: 0, large: 0 },
+    completed: { small: 0, medium: 0, large: 0 }
+  };
+
   filteredBookings.forEach(b => {
     b.items?.forEach((item: any) => {
-      if (item.id === 'small') sizeStats.small++;
-      if (item.id === 'medium') sizeStats.medium++;
-      if (item.id === 'large') sizeStats.large++;
+      if (item.id === 'small') stats.received.small++;
+      if (item.id === 'medium') stats.received.medium++;
+      if (item.id === 'large') stats.received.large++;
+
+      if (b.status === 'COMPLETED') {
+        if (item.id === 'small') stats.completed.small++;
+        if (item.id === 'medium') stats.completed.medium++;
+        if (item.id === 'large') stats.completed.large++;
+      }
     });
   });
 
@@ -139,7 +153,6 @@ export default function AdminDashboard() {
     setIsSubmitting(false);
   };
 
-
   // --- ZOBRAZENIA ---
 
   if (!isAuthenticated) {
@@ -156,7 +169,9 @@ export default function AdminDashboard() {
             <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Prihlasovacie meno" className="w-full text-center font-bold py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none focus:border-black text-black" />
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Heslo" className="w-full text-center font-bold py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none focus:border-black text-black" />
             {loginError && <p className="text-red-500 font-bold text-sm">{loginError}</p>}
-            <button type="submit" className="w-full bg-black text-white font-black text-lg py-5 rounded-2xl active:scale-95 transition-transform mt-4">Prihlásiť sa</button>
+            <button type="submit" disabled={isLoggingIn} className="w-full bg-black text-white font-black text-lg py-5 rounded-2xl active:scale-95 transition-transform mt-4 flex items-center justify-center gap-2">
+              {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : "Prihlásiť sa"}
+            </button>
           </form>
         </div>
       </main>
@@ -228,12 +243,44 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Analýza veľkostí */}
-          <h3 className="font-black text-lg mb-4">Aké batožiny si odkladajú?</h3>
-          <div className="grid grid-cols-3 gap-4 mb-8">
-             <div className="bg-white p-4 rounded-2xl border border-gray-100 text-center"><Briefcase className="w-6 h-6 mx-auto mb-2 text-gray-400"/><span className="block text-2xl font-black">{sizeStats.small}</span><span className="text-[10px] font-black text-gray-400 uppercase">Malé</span></div>
-             <div className="bg-white p-4 rounded-2xl border border-gray-100 text-center"><Luggage className="w-6 h-6 mx-auto mb-2 text-gray-400"/><span className="block text-2xl font-black">{sizeStats.medium}</span><span className="text-[10px] font-black text-gray-400 uppercase">Stredné</span></div>
-             <div className="bg-white p-4 rounded-2xl border border-gray-100 text-center"><Package className="w-6 h-6 mx-auto mb-2 text-gray-400"/><span className="block text-2xl font-black">{sizeStats.large}</span><span className="text-[10px] font-black text-gray-400 uppercase">Veľké</span></div>
+          {/* Analýza pohybu batožiny podľa veľkostí */}
+          <h3 className="font-black text-lg mb-4">Pohyb batožiny podľa veľkostí</h3>
+          <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden mb-8 shadow-sm">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Veľkosť</th>
+                  <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Prijaté</th>
+                  <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Vydané</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                <tr>
+                  <td className="p-4 flex items-center gap-3">
+                    <div className="p-2 bg-gray-50 rounded-lg"><Briefcase className="w-4 h-4 text-gray-400"/></div>
+                    <span className="font-bold text-sm">Malá batožina</span>
+                  </td>
+                  <td className="p-4 text-center font-black text-lg">{stats.received.small}</td>
+                  <td className="p-4 text-center font-black text-lg text-green-600">{stats.completed.small}</td>
+                </tr>
+                <tr>
+                  <td className="p-4 flex items-center gap-3">
+                    <div className="p-2 bg-gray-50 rounded-lg"><Luggage className="w-4 h-4 text-gray-400"/></div>
+                    <span className="font-bold text-sm">Stredná batožina</span>
+                  </td>
+                  <td className="p-4 text-center font-black text-lg">{stats.received.medium}</td>
+                  <td className="p-4 text-center font-black text-lg text-green-600">{stats.completed.medium}</td>
+                </tr>
+                <tr>
+                  <td className="p-4 flex items-center gap-3">
+                    <div className="p-2 bg-gray-50 rounded-lg"><Package className="w-4 h-4 text-gray-400"/></div>
+                    <span className="font-bold text-sm">Veľká batožina</span>
+                  </td>
+                  <td className="p-4 text-center font-black text-lg">{stats.received.large}</td>
+                  <td className="p-4 text-center font-black text-lg text-green-600">{stats.completed.large}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       )}
