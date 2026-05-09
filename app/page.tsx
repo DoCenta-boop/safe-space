@@ -249,6 +249,7 @@ export default function Home() {
               userName={userData.name} 
               size={luggageSummary} 
               userEmail={userData.email}
+              userPhone={userData.phone} // <-- TU JE PRIDANÝ TELEFÓN
               days={bookingDays} 
             />
             <button onClick={() => window.location.reload()} className="w-full mt-8 py-5 bg-gray-50 font-black rounded-2xl text-gray-400 active:text-black transition-all uppercase tracking-[0.2em] text-[10px]">Späť na mapu</button>
