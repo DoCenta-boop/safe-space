@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-// PRIDANÝ IMPORT MapPin pre navigačné tlačidlo
 import { Download, Share2, CheckCircle2, Loader2, Ticket, MapPin } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react'; 
 import { toJpeg } from 'html-to-image';
@@ -13,7 +12,7 @@ type Props = {
   userEmail: string;
   userPhone: string;
   days: number;
-  mapsLink?: string; // NOVÝ PARAMETER PRE NAVIGÁCIU
+  mapsLink?: string; // PARAMETER PRE NAVIGÁCIU
 };
 
 export default function ReservationTicket({ bookingId, userName, size, userEmail, userPhone, days, mapsLink }: Props) {
@@ -97,11 +96,12 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
     <div className="w-full flex flex-col items-center relative">
       
       {/* -------------------------------------------------------------
-        EXTRÉMNY ANTI-LAZY-LOADING HACK PRE MOBILY
-        Element je priamo na obrazovke, priehľadný a vzadu.
+        ANTI-LAZY-LOADING HACK PRE MOBILY (Oprava scrollovania)
+        Použitý 'position: fixed' zabezpečí, že tento obrovský prvok 
+        nerozšíri reálnu veľkosť stránky a nespôsobí zasekávanie/horizontálny scroll.
         -------------------------------------------------------------
       */}
-      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -50, opacity: 0.01, pointerEvents: 'none' }}>
+      <div style={{ position: 'fixed', top: 0, left: 0, zIndex: -50, opacity: 0.01, pointerEvents: 'none' }}>
         <div 
           ref={ticketRef} 
           className="bg-white" 
@@ -178,13 +178,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
       <h2 className="text-3xl font-black text-black mb-2 text-center tracking-tight">Rezervácia hotová!</h2>
       <p className="text-gray-500 font-bold text-sm text-center mb-8">Uložte si lístok a ukážte ho pri príchode.</p>
 
-      {/* --- TLAČIDLO NAVIGOVAŤ --- */}
-      {mapsLink && (
-        <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="w-full max-w-sm bg-blue-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20 mb-6 active:scale-95 transition-transform">
-          <MapPin className="w-5 h-5" /> Spustiť navigáciu k podniku
-        </a>
-      )}
-
+      {/* LÍSTOK */}
       <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-xl border border-gray-100 relative overflow-hidden mb-8">
         <div className="absolute top-0 left-0 w-full h-3 bg-black"></div>
         <div className="flex items-center gap-2 mb-8 mt-2">
@@ -196,7 +190,7 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
           <QRCodeSVG value={bookingId} size={150} level="H" />
         </div>
 
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 text-center">Váš tajný kód</p>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 text-center">Kód vašej rezervácie</p>
         <h3 className="text-4xl font-black text-black tracking-tight font-mono mb-8 text-center">{bookingId}</h3>
 
         <div className="space-y-4 pt-6 border-t-2 border-gray-100">
@@ -211,14 +205,25 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
         </div>
       </div>
 
-      <div className="flex gap-4 w-full max-w-sm px-2">
-        <button onClick={handleDownload} disabled={isGenerating} className="flex-1 py-4 bg-gray-200 text-black font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform">
-          {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Download className="w-5 h-5" /> Uložiť</>}
-        </button>
-        <button onClick={handleShare} disabled={isGenerating} className="flex-1 py-4 bg-black text-white font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-xl shadow-black/20">
-          {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Share2 className="w-5 h-5" /> Zdieľať</>}
-        </button>
+      {/* AKCIE (Uložiť/Zdieľať hore, Navigovať dole) */}
+      <div className="flex flex-col gap-4 w-full max-w-sm px-2">
+        <div className="flex gap-4 w-full">
+          <button onClick={handleDownload} disabled={isGenerating} className="flex-1 py-4 bg-gray-200 text-black font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform">
+            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Download className="w-5 h-5" /> Uložiť</>}
+          </button>
+          <button onClick={handleShare} disabled={isGenerating} className="flex-1 py-4 bg-black text-white font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-xl shadow-black/20">
+            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Share2 className="w-5 h-5" /> Zdieľať</>}
+          </button>
+        </div>
+
+        {/* --- TLAČIDLO NAVIGOVAŤ --- */}
+        {mapsLink && (
+          <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20 active:scale-95 transition-transform">
+            <MapPin className="w-5 h-5" /> Spustiť navigáciu k podniku
+          </a>
+        )}
       </div>
+
     </div>
   );
 }
