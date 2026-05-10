@@ -301,7 +301,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100"><div className="text-3xl font-black text-green-600">{totalRevenue} €</div><div className="text-[10px] font-black text-gray-400 uppercase mt-1">Tržby</div></div>
+              <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100"><div className="text-3xl font-black text-green-600">{totalRevenue.toFixed(2)} €</div><div className="text-[10px] font-black text-gray-400 uppercase mt-1">Tržby</div></div>
               <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100"><div className="text-3xl font-black text-black">{totalBags}</div><div className="text-[10px] font-black text-gray-400 uppercase mt-1">Prijaté kusy</div></div>
               <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100"><div className="text-3xl font-black text-black">{totalCompleted}</div><div className="text-[10px] font-black text-gray-400 uppercase mt-1">Vydané / Hotovo</div></div>
               <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100"><div className="text-3xl font-black text-black">{avgDays}</div><div className="text-[10px] font-black text-gray-400 uppercase mt-1">Priemerná doba (Dni)</div></div>
@@ -477,19 +477,19 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
                   <span className="font-black flex items-center gap-2"><Briefcase className="w-5 h-5 text-gray-400"/> Malá batožina</span>
                   <div className="flex items-center gap-2">
-                    <input type="number" value={pricing.small} onChange={e => setPricing({...pricing, small: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €
+                    <input type="number" step="0.01" value={pricing.small} onChange={e => setPricing({...pricing, small: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €
                   </div>
                 </div>
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
                   <span className="font-black flex items-center gap-2"><Luggage className="w-5 h-5 text-gray-400"/> Stredná batožina</span>
                   <div className="flex items-center gap-2">
-                    <input type="number" value={pricing.medium} onChange={e => setPricing({...pricing, medium: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €
+                    <input type="number" step="0.01" value={pricing.medium} onChange={e => setPricing({...pricing, medium: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €
                   </div>
                 </div>
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
                   <span className="font-black flex items-center gap-2"><Package className="w-5 h-5 text-gray-400"/> Veľká batožina</span>
                   <div className="flex items-center gap-2">
-                    <input type="number" value={pricing.large} onChange={e => setPricing({...pricing, large: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €
+                    <input type="number" step="0.01" value={pricing.large} onChange={e => setPricing({...pricing, large: Number(e.target.value)})} className="w-16 p-2 text-center font-black rounded-lg border"/> €
                   </div>
                 </div>
               </div>
