@@ -8,7 +8,7 @@ import SizeSelector, { SelectedLuggage } from "../components/SizeSelector";
 import UserDetailsForm from "../components/UserDetailsForm";
 import CameraCapture from "../components/CameraCapture";
 import ReservationTicket from "../components/ReservationTicket";
-import { createBooking, getLocations } from "../lib/bookingService";
+import { createBooking, getLocations, getPricingConfig } from "../lib/bookingService";
 
 function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; 
@@ -40,12 +40,16 @@ export default function Home() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pricing, setPricing] = useState({ small: 2, medium: 3, large: 4 });
 
   useEffect(() => {
     async function loadData() {
-      const result = await getLocations();
-      if (result.success && result.data) {
-        setLocations((result.data as any[]).filter(loc => loc.isActive !== false));
+      const [locResult, priceResult] = await Promise.all([getLocations(), getPricingConfig()]);
+      if (locResult.success && locResult.data) {
+        setLocations((locResult.data as any[]).filter(loc => loc.isActive !== false));
+      }
+      if (priceResult.success && priceResult.data) {
+        setPricing(priceResult.data as any);
       }
       setIsLoadingLocations(false);
     }
@@ -241,7 +245,7 @@ export default function Home() {
 
         {/* KROKY 2 AŽ 5 */}
         <div className="w-full">
-          {step === 2 && selectedLocation && <div className="animate-in fade-in"><SizeSelector location={selectedLocation} onNext={handleSizeSelection} /></div>}
+          {step === 2 && selectedLocation && <div className="animate-in fade-in"><SizeSelector location={selectedLocation} pricing={pricing} onNext={handleSizeSelection} /></div>}
           {step === 3 && <div className="animate-in fade-in"><UserDetailsForm onNext={(data) => { setUserData(data); setCapturedImages([]); setCurrentPhotoIndex(0); setStep(4); }} onBack={() => setStep(2)} /></div>}
           {step === 4 && <div className="animate-in fade-in"><CameraCapture key={`cam-${currentPhotoIndex}`} title={`Odfotografuj: ${selectedItems[currentPhotoIndex].label}`} onCapture={handlePhotoCaptured} onCancel={() => setStep(3)} /></div>}
           
@@ -260,12 +264,12 @@ export default function Home() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Miesto</span><span className="font-black text-sm md:text-base text-right max-w-[60%]">{selectedLocation?.name}</span></div>
                   <div className="flex justify-between items-center"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Batožina</span><span className="font-black text-sm md:text-base text-right max-w-[60%] leading-tight">{luggageSummary}</span></div>
-                  <div className="flex justify-between items-center"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Doba</span><span className="font-black text-sm md:text-base">24 hodín</span></div>
+                  <div className="flex justify-between items-center"><span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">Doba</span><span className="font-black text-sm md:text-base text-blue-600">24 hodín</span></div>
                 </div>
                 
                 <div className="flex justify-between items-center pt-5 border-t-2 border-gray-100 mt-5">
                   <span className="text-black font-black uppercase text-[10px] tracking-widest">Celkom</span>
-                  <span className="font-black text-3xl text-blue-600">{totalPrice} €</span>
+                  <span className="font-black text-3xl text-blue-600">{totalPrice.toFixed(2)} €</span>
                 </div>
               </div>
 

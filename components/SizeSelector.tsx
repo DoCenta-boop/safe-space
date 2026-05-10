@@ -1,42 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-// Odstránený CalendarDays, pridané Info
 import { Backpack, Briefcase, Luggage, Plus, Minus, Info } from 'lucide-react';
 import { Location } from './LocationSelector';
-
-const SIZES = [
-  { 
-    id: 'small', 
-    label: 'Malá batožina', 
-    price: 2, 
-    icon: Backpack, 
-    desc: 'Batoh, kabelka (40x30x20 cm)' 
-  },
-  { 
-    id: 'medium', 
-    label: 'Stredná batožina', 
-    price: 3, 
-    icon: Briefcase, 
-    desc: 'Menší cestovný kufor (55x40x20 cm)' 
-  },
-  { 
-    id: 'large', 
-    label: 'Veľká batožina', 
-    price: 4, 
-    icon: Luggage, 
-    desc: 'Veľký cestovný kufor (80x50x 30 cm)' 
-  },
-];
 
 export type SelectedLuggage = { id: string; typeId: string; label: string; price: number };
 
 type Props = {
   location: Location;
+  pricing: { small: number; medium: number; large: number }; // PRIDANÝ PARAMETER CENNÍKA
   onNext: (items: SelectedLuggage[], days: number, totalPrice: number) => void;
 };
 
-export default function SizeSelector({ location, onNext }: Props) {
+export default function SizeSelector({ location, pricing, onNext }: Props) {
+  // SIZES je teraz vnútri komponentu, aby si vedelo prečítať aktuálne 'pricing' hodnoty
+  const SIZES = [
+    { 
+      id: 'small', 
+      label: 'Malá batožina', 
+      price: pricing?.small || 2, 
+      icon: Backpack, 
+      desc: 'Batoh, kabelka (40x30x20 cm)' 
+    },
+    { 
+      id: 'medium', 
+      label: 'Stredná batožina', 
+      price: pricing?.medium || 3, 
+      icon: Briefcase, 
+      desc: 'Menší cestovný kufor (55x40x20 cm)' 
+    },
+    { 
+      id: 'large', 
+      label: 'Veľká batožina', 
+      price: pricing?.large || 4, 
+      icon: Luggage, 
+      desc: 'Veľký cestovný kufor (80x50x 30 cm)' 
+    },
+  ];
+
   const [counts, setCounts] = useState<{ [key: string]: number }>({ small: 0, medium: 0, large: 0 });
 
   const totalItemsCount = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -89,8 +90,8 @@ export default function SizeSelector({ location, onNext }: Props) {
                   </div>
                   <div className="flex flex-col">
                     <div className="font-black text-lg md:text-xl text-black leading-tight">{size.label}</div>
-                    {/* Zmena z "deň" na "24h" */}
-                    <div className="text-sm font-black text-blue-600 mt-0.5">{size.price} € / 24h</div>
+                    {/* CENA NA 2 DESATINNÉ MIESTA */}
+                    <div className="text-sm font-black text-blue-600 mt-0.5">{size.price.toFixed(2)} € / 24h</div>
                     
                     <div className="text-xs md:text-sm font-semibold text-gray-500 mt-2 leading-snug max-w-[200px] md:max-w-[240px]">
                       {size.desc}
@@ -120,7 +121,6 @@ export default function SizeSelector({ location, onNext }: Props) {
         })}
       </div>
       
-      {/* Vymenené: Namiesto počtu dní je tu Info hláška a rovno tlačidlo pokračovať */}
       {totalItemsCount > 0 && (
         <div className="animate-in fade-in duration-300 w-full">
           <div className="flex items-center justify-center gap-2 mb-4 px-4 text-gray-400">
@@ -131,7 +131,7 @@ export default function SizeSelector({ location, onNext }: Props) {
           </div>
 
           <button onClick={handleContinue} className="w-full bg-black text-white font-black py-5 md:py-6 rounded-2xl active:scale-95 transition-transform flex justify-between px-6 font-sans shadow-xl shadow-black/20 text-lg">
-            <span>Pokračovať k údajom</span><span>{totalPrice} €</span>
+            <span>Pokračovať k údajom</span><span>{totalPrice.toFixed(2)} €</span>
           </button>
         </div>
       )}
