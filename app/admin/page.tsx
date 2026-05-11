@@ -11,7 +11,8 @@ export type Location = {
   id: string; name: string; address: string; pin?: string; slug?: string; isActive?: boolean;
   capacities: { small: SizeCapacity; medium: SizeCapacity; large: SizeCapacity };
   mapPosition: { top: string; left: string }; 
-  lat?: number; lng?: number; mapsLink?: string; // GPS UDAJE
+  lat?: number; lng?: number; mapsLink?: string;
+  openingHours?: { open: string; close: string }; // PRIDANÉ OTVÁRACIE HODINY
 };
 
 export default function AdminDashboard() {
@@ -30,13 +31,13 @@ export default function AdminDashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // STATE PRE NOVÝ PODNIK (pridané lat, lng, mapsLink)
-  const [newLoc, setNewLoc] = useState({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2, lat: '', lng: '', mapsLink: '' });
+  // PRIDANÉ openTime a closeTime do nového podniku
+  const [newLoc, setNewLoc] = useState({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2, lat: '', lng: '', mapsLink: '', openTime: '08:00', closeTime: '20:00' });
 
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // STATE PRE ÚPRAVU (pridané lat, lng, mapsLink)
-  const [editLoc, setEditLoc] = useState({ name: '', address: '', smallCap: 0, mediumCap: 0, largeCap: 0, lat: '', lng: '', mapsLink: '' });
+  // PRIDANÉ openTime a closeTime do úpravy podniku
+  const [editLoc, setEditLoc] = useState({ name: '', address: '', smallCap: 0, mediumCap: 0, largeCap: 0, lat: '', lng: '', mapsLink: '', openTime: '', closeTime: '' });
 
   const [filterLocation, setFilterLocation] = useState<string>('ALL');
   const [filterPeriod, setFilterPeriod] = useState<string>('ALL');
@@ -146,13 +147,14 @@ export default function AdminDashboard() {
       mapPosition: { top: '50%', left: '50%' },
       lat: parseFloat(newLoc.lat) || 0,
       lng: parseFloat(newLoc.lng) || 0,
-      mapsLink: newLoc.mapsLink
+      mapsLink: newLoc.mapsLink,
+      openingHours: { open: newLoc.openTime, close: newLoc.closeTime } // PRIDANÉ ULOŽENIE HODÍN
     });
     if (result.success) { 
       alert("Podnik vytvorený!"); 
       loadData(); 
       setShowAddForm(false); 
-      setNewLoc({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2, lat: '', lng: '', mapsLink: '' }); 
+      setNewLoc({ name: '', address: '', smallCap: 10, mediumCap: 5, largeCap: 2, lat: '', lng: '', mapsLink: '', openTime: '08:00', closeTime: '20:00' }); 
     }
     setIsSubmitting(false);
   };
@@ -162,7 +164,8 @@ export default function AdminDashboard() {
     setEditLoc({ 
       name: loc.name, address: loc.address, 
       smallCap: loc.capacities.small.max, mediumCap: loc.capacities.medium.max, largeCap: loc.capacities.large.max,
-      lat: loc.lat?.toString() || '', lng: loc.lng?.toString() || '', mapsLink: loc.mapsLink || ''
+      lat: loc.lat?.toString() || '', lng: loc.lng?.toString() || '', mapsLink: loc.mapsLink || '',
+      openTime: loc.openingHours?.open || '08:00', closeTime: loc.openingHours?.close || '20:00' // NAČÍTANIE HODÍN
     });
   };
 
@@ -180,7 +183,8 @@ export default function AdminDashboard() {
         },
         lat: parseFloat(editLoc.lat) || 0,
         lng: parseFloat(editLoc.lng) || 0,
-        mapsLink: editLoc.mapsLink
+        mapsLink: editLoc.mapsLink,
+        openingHours: { open: editLoc.openTime, close: editLoc.closeTime } // ULOŽENIE HODÍN
       });
       setEditingId(null); loadData();
     }
@@ -345,6 +349,18 @@ export default function AdminDashboard() {
                   <input type="text" placeholder="Adresa" value={newLoc.address} onChange={(e) => setNewLoc({...newLoc, address: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
                 </div>
                 
+                {/* --- VÝBER ČASU PRE NOVÝ PODNIK --- */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-gray-400 uppercase mb-1 ml-1">Otvára od</span>
+                    <input type="time" value={newLoc.openTime} onChange={(e) => setNewLoc({...newLoc, openTime: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-gray-400 uppercase mb-1 ml-1">Zatvára o</span>
+                    <input type="time" value={newLoc.closeTime} onChange={(e) => setNewLoc({...newLoc, closeTime: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <input type="text" placeholder="Lat (napr. 48.148)" value={newLoc.lat} onChange={(e) => setNewLoc({...newLoc, lat: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
                   <input type="text" placeholder="Lng (napr. 17.107)" value={newLoc.lng} onChange={(e) => setNewLoc({...newLoc, lng: e.target.value})} className="p-4 bg-gray-50 border rounded-2xl font-bold outline-none focus:border-black" />
@@ -373,6 +389,18 @@ export default function AdminDashboard() {
                         <input type="text" value={editLoc.name} onChange={(e) => setEditLoc({...editLoc, name: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         <input type="text" value={editLoc.address} onChange={(e) => setEditLoc({...editLoc, address: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         
+                        {/* --- VÝBER ČASU PRE ÚPRAVU PODNIKU --- */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-blue-800 uppercase mb-1">Otvára od</span>
+                            <input type="time" value={editLoc.openTime} onChange={(e) => setEditLoc({...editLoc, openTime: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-blue-800 uppercase mb-1">Zatvára o</span>
+                            <input type="time" value={editLoc.closeTime} onChange={(e) => setEditLoc({...editLoc, closeTime: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
+                          </div>
+                        </div>
+
                         <input type="text" placeholder="Lat" value={editLoc.lat} onChange={(e) => setEditLoc({...editLoc, lat: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         <input type="text" placeholder="Lng" value={editLoc.lng} onChange={(e) => setEditLoc({...editLoc, lng: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
                         <input type="text" placeholder="Google Maps Link" value={editLoc.mapsLink} onChange={(e) => setEditLoc({...editLoc, mapsLink: e.target.value})} className="w-full p-3 bg-white border rounded-xl font-bold" />
@@ -398,11 +426,10 @@ export default function AdminDashboard() {
                         <h3 className="font-black text-xl">{loc.name}</h3>
                         <p className="text-xs text-gray-400 font-bold flex items-center gap-1 mt-1"><MapPin className="w-3 h-3"/> {loc.address}</p>
                         
-                        {loc.mapsLink && (
-                          <a href={loc.mapsLink} target="_blank" className="text-blue-500 text-[10px] font-bold mt-1 inline-block">
-                            🔗 Otvoriť Maps
-                          </a>
-                        )}
+                        {/* Zobrazenie otváracích hodín v admin náhľade */}
+                        <p className="text-[10px] text-gray-500 font-black uppercase mt-1 tracking-widest bg-gray-50 w-max px-2 py-1 rounded-md">
+                          {loc.openingHours?.open || '08:00'} - {loc.openingHours?.close || '20:00'}
+                        </p>
 
                       </div>
                       <div className="flex gap-1">

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from "react";
-// Pridaný import 'Search' pre ikonku lupy
-import { MapPin, ArrowLeft, Briefcase, Luggage, Package, Loader2, Navigation, Plus, Search } from "lucide-react";
+// Pridal som ikonku 'Clock'
+import { MapPin, ArrowLeft, Briefcase, Luggage, Package, Loader2, Navigation, Plus, Search, Clock } from "lucide-react";
 import LocationSelector, { Location } from "../components/LocationSelector";
 import SizeSelector, { SelectedLuggage } from "../components/SizeSelector";
 import UserDetailsForm from "../components/UserDetailsForm";
@@ -19,6 +19,23 @@ function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon
   return R * c;
 }
 
+// LOGIKA KONTROLY ČASU
+const checkIsOpen = (openTime?: string, closeTime?: string) => {
+  if (!openTime || !closeTime) return true; // Ak nie sú nastavené časy, predpokladáme že je otvorené non-stop
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const [openH, openM] = openTime.split(':').map(Number);
+  const [closeH, closeM] = closeTime.split(':').map(Number);
+  const openMin = openH * 60 + openM;
+  const closeMin = closeH * 60 + closeM;
+
+  if (closeMin <= openMin) {
+      // Prevádzka je otvorená cez polnoc (napr. 20:00 do 02:00)
+      return currentMinutes >= openMin || currentMinutes < closeMin;
+  }
+  return currentMinutes >= openMin && currentMinutes < closeMin;
+};
+
 export default function Home() {
   const [step, setStep] = useState(0); 
   const [locations, setLocations] = useState<any[]>([]); 
@@ -27,7 +44,6 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locatingError, setLocatingError] = useState(false);
 
-  // NOVÉ: Stavy pre vyhľadávanie a zoradenie
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<'nearest' | 'availability'>('nearest');
 
@@ -94,15 +110,13 @@ export default function Home() {
 
   const luggageSummary = Object.entries(selectedItems.reduce((acc, item) => { acc[item.label] = (acc[item.label] || 0) + 1; return acc; }, {} as Record<string, number>)).map(([label, count]) => `${count}x ${label}`).join(', ');
 
-  // KOMBINOVANÉ SPRACOVANIE: Filtrovanie + Výpočty + Zoradenie
+  // KOMBINOVANÉ SPRACOVANIE
   const finalLocations = [...locations]
-    // 1. Filtrácia naživo (podľa názvu alebo adresy)
     .filter(loc => {
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
       return loc.name.toLowerCase().includes(q) || loc.address.toLowerCase().includes(q);
     })
-    // 2. Výpočet vzdialenosti a dostupných kapacít
     .map(loc => {
       let distance = null;
       if (userLocation && loc.lat && loc.lng) {
@@ -114,21 +128,23 @@ export default function Home() {
       const lFree = loc.capacities.large.max - loc.capacities.large.occupied;
       const totalFree = sFree + mFree + lFree;
       
-      return { ...loc, distance, sFree, mFree, lFree, totalFree };
+      // VYHODNOTENIE OTVÁRACÍCH HODÍN PRE KAŽDÝ PODNIK
+      const isOpen = checkIsOpen(loc.openingHours?.open, loc.openingHours?.close);
+      const openText = loc.openingHours?.open ? `${loc.openingHours.open} - ${loc.openingHours.close}` : 'Non-stop';
+
+      return { ...loc, distance, sFree, mFree, lFree, totalFree, isOpen, openText };
     })
-    // 3. Zoradenie (Najbližšie vs. Najviac miesta)
     .sort((a, b) => {
       if (sortBy === 'availability') {
-        return b.totalFree - a.totalFree; // Od najviac miest po najmenej
+        return b.totalFree - a.totalFree;
       } else {
-        return (a.distance || 9999) - (b.distance || 9999); // Od najbližšieho
+        return (a.distance || 9999) - (b.distance || 9999); 
       }
     });
 
   return (
     <main className="min-h-[100dvh] w-full bg-gray-50 flex flex-col font-sans text-black">
       
-      {/* HLAVIČKA */}
       <div className="bg-white p-6 pt-10 shadow-sm z-10 shrink-0 relative">
         <div className="flex items-center justify-center">
           <span className="text-3xl md:text-4xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
@@ -143,7 +159,6 @@ export default function Home() {
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-12 w-full max-w-lg mx-auto">
         
-        {/* KROK 0: ZOZNAM PODNIKOV */}
         {step === 0 && (
           <div className="animate-in fade-in w-full">
             <h2 className="text-3xl font-black mb-2 tracking-tight">Kam s batožinou?</h2>
@@ -151,10 +166,8 @@ export default function Home() {
             
             {locatingError && <div className="bg-orange-50 text-orange-700 p-4 rounded-2xl text-xs font-bold mb-6 border border-orange-100">Poloha nie je povolená. Podniky sú zoradené náhodne. Pre zobrazenie vzdialeností povoľte GPS.</div>}
 
-            {/* --- PANEL: VYHĽADÁVANIE A ZORADENIE --- */}
             {!isLoadingLocations && locations.length > 0 && (
               <div className="mb-8 space-y-4">
-                {/* Search Bar */}
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                     <Search className="h-5 w-5 text-gray-400" />
@@ -168,7 +181,6 @@ export default function Home() {
                   />
                 </div>
 
-                {/* Sort Buttons */}
                 <div className="flex gap-3 w-full">
                   <button
                     onClick={() => setSortBy('nearest')}
@@ -201,6 +213,13 @@ export default function Home() {
                         <div>
                           <h3 className="font-black text-xl mb-1 leading-tight">{loc.name}</h3>
                           <p className="text-xs text-gray-400 font-bold flex items-start gap-1"><MapPin className="w-3 h-3 mt-0.5 shrink-0"/> <span>{loc.address}</span></p>
+                          
+                          {/* VIZUÁL PRE OTVÁRACIE HODINY */}
+                          <div className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${loc.isOpen ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                            <Clock className="w-3 h-3" />
+                            {loc.isOpen ? 'Otvorené' : 'Zatvorené'} • {loc.openText}
+                          </div>
+
                         </div>
                         {loc.distance !== null && (
                           <div className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 shrink-0">
@@ -209,9 +228,8 @@ export default function Home() {
                         )}
                       </div>
 
-                      {/* MAPA */}
                       {loc.lat && loc.lng && (
-                        <div className="w-full h-32 md:h-40 mb-4 rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 relative pointer-events-auto">
+                        <div className="w-full h-32 md:h-40 mb-4 rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 relative pointer-events-auto mt-2">
                           <iframe
                             width="100%"
                             height="100%"
@@ -231,8 +249,9 @@ export default function Home() {
                       </div>
 
                       <div className="mt-auto">
-                        <button onClick={() => handleLocationSelect(loc)} disabled={loc.totalFree === 0} className="w-full bg-black text-white font-black py-4 md:py-5 rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 shadow-xl shadow-black/20">
-                          Zvoliť toto miesto
+                        {/* ZABLOKOVANIE TLAČIDLA AK JE ZATVORENÉ */}
+                        <button onClick={() => handleLocationSelect(loc)} disabled={loc.totalFree === 0 || !loc.isOpen} className={`w-full font-black py-4 md:py-5 rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 transition-all ${loc.totalFree === 0 || !loc.isOpen ? 'bg-gray-200 text-gray-400 opacity-60 cursor-not-allowed' : 'bg-black text-white active:scale-95 shadow-xl shadow-black/20'}`}>
+                          {loc.totalFree === 0 ? 'Plná kapacita' : !loc.isOpen ? 'Aktuálne zatvorené' : 'Zvoliť toto miesto'}
                         </button>
                       </div>
                     </div>
@@ -243,7 +262,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* KROKY 2 AŽ 5 */}
+        {/* KROKY 2 AŽ 6 ZOSTÁVAJÚ ROVNAKÉ */}
         <div className="w-full">
           {step === 2 && selectedLocation && <div className="animate-in fade-in"><SizeSelector location={selectedLocation} pricing={pricing} onNext={handleSizeSelection} /></div>}
           {step === 3 && <div className="animate-in fade-in"><UserDetailsForm onNext={(data) => { setUserData(data); setCapturedImages([]); setCurrentPhotoIndex(0); setStep(4); }} onBack={() => setStep(2)} /></div>}
@@ -283,7 +302,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* KROK 6: LÍSTOK */}
           {step === 6 && bookingId && (
             <div className="animate-in fade-in w-full">
               <ReservationTicket 
@@ -300,7 +318,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* PÄTIČKA ZÁKAZNÍKA */}
         {!bookingId && (
           <div className="mt-12 w-full text-center pb-4">
             <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Powered by Docenta</p>
