@@ -215,42 +215,52 @@ export default function PartnerDashboard() {
                   <div className="flex justify-between items-center"><span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Zostávajúci čas</span><BookingTimer status={booking.status} createdAt={booking.createdAt} storedAt={booking.storedAt} bookingDays={booking.bookingDays || 1} /></div>
                 )}
 
-                {/* --- HORIZONTÁLNA FOTODOKUMENTÁCIA S OZNAČENÍM --- */}
+                {/* --- OPRAVENÁ FOTODOKUMENTÁCIA --- */}
                 <div className="pt-6 border-t-2 border-gray-100">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Fotodokumentácia</span>
-                    <span className="text-gray-400 text-[10px] font-black uppercase flex items-center gap-1">Skrolujte <ChevronRight className="w-3 h-3" /></span>
+                    {booking.images && booking.images.length > 1 && (
+                      <span className="text-gray-400 text-[10px] font-black uppercase flex items-center gap-1">
+                        Skrolujte <ChevronRight className="w-3 h-3" />
+                      </span>
+                    )}
                   </div>
                   
                   {booking.images && booking.images.length > 0 ? (
-                    <div className="flex overflow-x-auto gap-4 pb-4 snap-x no-scrollbar">
-                      {booking.images.map((imgObj: any, i: number) => {
-                        // Nájdenie prislúchajúceho typu batožiny (Malá/Stredná/Veľká) podľa ID
-                        const item = booking.items?.find((it: any) => it.id === imgObj.id);
+                    <div className="flex overflow-x-auto gap-4 pb-4 snap-x no-scrollbar -mx-2 px-2">
+                      {booking.images.map((imgData: any, i: number) => {
+                        // Dynamické priradenie fotky a štítku
+                        const imgSrc = typeof imgData === 'string' ? imgData : imgData.image;
+                        const imgId = typeof imgData === 'object' ? imgData.id : null;
+                        
+                        // Nájdeme správny label z items (podľa ID alebo indexu)
+                        const item = booking.items?.find((it: any) => it.id === imgId) || booking.items?.[i];
+                        const itemLabel = item?.label || "Batožina";
+
                         return (
                           <div 
                             key={i} 
-                            className="relative min-w-[200px] aspect-[3/4] rounded-2xl overflow-hidden bg-gray-50 border-2 border-gray-100 snap-start cursor-pointer group shadow-sm"
-                            onClick={() => setFullscreenImg(imgObj.image)}
+                            className="relative min-w-[240px] aspect-[3/4] rounded-[2rem] overflow-hidden bg-gray-200 border-2 border-gray-100 snap-start cursor-pointer group shadow-md"
+                            onClick={() => setFullscreenImg(imgSrc)}
                           >
-                            <img src={imgObj.image} alt="Batožina" className="w-full h-full object-cover" />
+                            <img src={imgSrc} alt={itemLabel} className="w-full h-full object-cover" />
                             
-                            {/* ŠTÍTOK S TYPOM BATOŽINY PRIAMO NA FOTKE */}
-                            <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20">
-                              <p className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5">
-                                <Package className="w-3 h-3 text-blue-400" /> {item?.label || 'Batožina'}
+                            {/* ŠTÍTOK S TYPOM BATOŽINY */}
+                            <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 z-10">
+                              <p className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                <Package className="w-3.5 h-3.5 text-blue-400" /> {itemLabel}
                               </p>
                             </div>
 
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors flex items-center justify-center">
-                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8" />
+                            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors flex items-center justify-center">
+                              <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity w-10 h-10" />
                             </div>
                           </div>
                         );
                       })}
                     </div>
                   ) : (
-                    <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-6 rounded-2xl text-center">
+                    <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-[2rem] text-center">
                       <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Bez fotografií</p>
                     </div>
                   )}
@@ -266,7 +276,6 @@ export default function PartnerDashboard() {
           </div>
         ) : (
           <div className="max-w-sm mx-auto w-full">
-            {/* ... zvyšok kódu (Scan/List) zostáva nezmenený ... */}
             {activeTab === 'scan' ? (
               <div className="animate-in fade-in w-full">
                 <button onClick={() => setIsScanning(true)} className="w-full bg-black text-white py-14 rounded-[2.5rem] shadow-2xl shadow-black/20 flex flex-col items-center justify-center gap-6 active:scale-95 transition-transform mb-10">
