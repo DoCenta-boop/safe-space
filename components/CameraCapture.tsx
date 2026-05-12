@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { RotateCcw, Check, AlertCircle, Camera } from 'lucide-react';
+import { RotateCcw, Check, AlertCircle, Camera, Upload } from 'lucide-react'; // Pridaný Upload
 
 type Props = {
   title: string;
@@ -30,7 +30,7 @@ export default function CameraCapture({ title, onCapture, onCancel }: Props) {
     setImage(null);
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError('Váš prehliadač nepodporuje prístup ku kamere.');
+      setCameraError('Váš prehliadač nepodporuje priamy prístup ku kamere.');
       return;
     }
 
@@ -48,7 +48,7 @@ export default function CameraCapture({ title, onCapture, onCancel }: Props) {
     } catch (err: any) {
       console.error('Chyba kamery:', err);
       if (err.name === 'NotAllowedError') {
-        setCameraError('Prístup bol zamietnutý. Prosím, povoľte kameru vo vyskakovacom okne alebo v nastaveniach prehliadača.');
+        setCameraError('Prístup bol zamietnutý. Povoľte kameru, alebo nahrajte fotku priamo zo zariadenia.');
       } else {
         setCameraError(`Kamera nie je dostupná: ${err.message || 'Neznáma chyba'}`);
       }
@@ -90,6 +90,21 @@ export default function CameraCapture({ title, onCapture, onCancel }: Props) {
     }
   };
 
+  // NOVÉ: Funkcia pre spracovanie súboru z galérie (Fallback)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setImage(event.target.result as string);
+        stopCamera(); // Vypneme živú kameru, keďže máme obrázok zo súboru
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Ak sa fotka nepáči, znova zapneme živý stream
   const retakePhoto = () => { 
     startCamera(); 
@@ -110,35 +125,52 @@ export default function CameraCapture({ title, onCapture, onCancel }: Props) {
         <div className="w-full flex flex-col items-center">
           {cameraError ? (
             // Stav: Nastala chyba (napr. používateľ zamietol prístup)
-            <div className="w-full aspect-[3/4] bg-red-50 rounded-[2rem] flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-red-200 mb-6">
+            <div className="w-full bg-red-50 rounded-[2rem] flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-red-200 mb-6">
               <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-              <p className="text-red-700 font-bold mb-4 text-sm leading-relaxed">{cameraError}</p>
-              <button onClick={startCamera} className="py-3 px-6 bg-red-600 text-white font-bold rounded-xl active:scale-95 transition-transform flex items-center gap-2">
-                <Camera className="w-4 h-4" /> Skúsiť znova
-              </button>
+              <p className="text-red-700 font-bold mb-6 text-sm leading-relaxed">{cameraError}</p>
+              
+              <div className="flex flex-col gap-3 w-full max-w-xs">
+                <button onClick={startCamera} className="py-4 px-6 bg-red-600 text-white font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-2 w-full">
+                  <Camera className="w-5 h-5" /> Povoliť kameru
+                </button>
+                
+                {/* FALLBACK TLAČIDLO V PRÍPADE CHYBY */}
+                <label className="py-4 px-6 bg-white text-red-600 border-2 border-red-200 font-bold rounded-xl active:scale-95 transition-transform flex items-center justify-center gap-2 cursor-pointer w-full text-center">
+                  <Upload className="w-5 h-5 shrink-0" /> Nahrať fotku
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileUpload} />
+                </label>
+              </div>
             </div>
           ) : (
             // Stav: Živý obraz a čakanie na stlačenie spúšte
-            <div className="relative w-full aspect-[3/4] bg-black rounded-[2rem] overflow-hidden mb-6 shadow-xl shadow-black/10">
-              {/* playsInline a muted sú dôležité na to, aby iOS nezapol video na celú obrazovku */}
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted 
-                className="w-full h-full object-cover" 
-              />
-              <button 
-                onClick={takePhoto} 
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full border-[6px] border-white flex items-center justify-center active:scale-90 transition-all shadow-xl z-10"
-              >
-                <div className="w-14 h-14 bg-white rounded-full shadow-inner" />
-              </button>
+            <div className="w-full flex flex-col items-center">
+              <div className="relative w-full aspect-[3/4] bg-black rounded-[2rem] overflow-hidden mb-4 shadow-xl shadow-black/10">
+                {/* playsInline a muted sú dôležité na to, aby iOS nezapol video na celú obrazovku */}
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  playsInline 
+                  muted 
+                  className="w-full h-full object-cover" 
+                />
+                <button 
+                  onClick={takePhoto} 
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full border-[6px] border-white flex items-center justify-center active:scale-90 transition-all shadow-xl z-10"
+                >
+                  <div className="w-14 h-14 bg-white rounded-full shadow-inner" />
+                </button>
+              </div>
+              
+              {/* FALLBACK TLAČIDLO POD KAMEROU */}
+              <label className="text-gray-500 font-bold text-sm flex items-center gap-2 cursor-pointer hover:text-black transition-colors bg-gray-100 px-5 py-3 rounded-xl mb-4 mt-2 active:bg-gray-200">
+                <Upload className="w-4 h-4" /> Alebo nahrať fotku z galérie
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+              </label>
             </div>
           )}
         </div>
       ) : (
-        // Stav: Fotka je odfotená, čakáme na potvrdenie
+        // Stav: Fotka je odfotená/nahratá, čakáme na potvrdenie
         <div className="w-full flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
           <img src={image} alt="Náhľad batožiny" className="w-full aspect-[3/4] object-cover rounded-[2rem] mb-6 shadow-xl shadow-black/10" />
           <div className="flex gap-4 w-full">

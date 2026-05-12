@@ -228,6 +228,7 @@ export default function Home() {
                         )}
                       </div>
 
+                      {/* MAPA */}
                       {loc.lat && loc.lng && (
                         <div className="w-full h-32 md:h-40 mb-4 rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 relative pointer-events-auto mt-2">
                           <iframe
@@ -292,16 +293,24 @@ export default function Home() {
                 </div>
               </div>
 
-              <button 
-                onClick={handlePaymentAndBooking} 
-                disabled={isSubmitting}
-                className="w-full bg-black text-white font-black text-lg py-5 md:py-6 rounded-2xl active:scale-95 transition-transform flex items-center justify-center gap-3 disabled:bg-gray-400 shadow-xl shadow-black/20"
-              >
-                {isSubmitting ? <><Loader2 className="w-7 h-7 animate-spin" /> Ukladám...</> : "Potvrdiť rezerváciu"}
-              </button>
+              {/* TLAČIDLO + INFORMATÍVNA VETA */}
+              <div className="w-full flex flex-col items-center">
+                <button 
+                  onClick={handlePaymentAndBooking} 
+                  disabled={isSubmitting}
+                  className="w-full bg-black text-white font-black text-lg py-5 md:py-6 rounded-2xl active:scale-95 transition-transform flex items-center justify-center gap-3 disabled:bg-gray-400 shadow-xl shadow-black/20"
+                >
+                  {isSubmitting ? <><Loader2 className="w-7 h-7 animate-spin" /> Ukladám...</> : "Potvrdiť rezerváciu"}
+                </button>
+                
+                <p className="text-[10px] text-gray-500 font-medium mt-4 px-2 leading-relaxed text-center">
+                  Potvrdením rezervácie potvrdzujete správnosť údajov a súhlasíte s našimi <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline">podmienkami</a> a <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline">ochranou osobných údajov</a>.
+                </p>
+              </div>
             </div>
           )}
 
+          {/* KROK 6: LÍSTOK */}
           {step === 6 && bookingId && (
             <div className="animate-in fade-in w-full">
               <ReservationTicket 
@@ -318,6 +327,7 @@ export default function Home() {
           )}
         </div>
 
+        {/* PÄTIČKA ZÁKAZNÍKA */}
         {!bookingId && (
           <div className="mt-12 w-full text-center pb-4">
             <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Powered by Docenta</p>

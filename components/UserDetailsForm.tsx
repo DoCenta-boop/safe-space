@@ -11,11 +11,14 @@ export default function UserDetailsForm({ onNext, onBack }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [agreed, setAgreed] = useState(false); // STAV PRE SÚHLAS
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Posunieme údaje do hlavnej stránky a ideme na fotenie
-    onNext({ name, email, phone });
+    if (agreed) {
+      // Posunieme údaje do hlavnej stránky a ideme na fotenie
+      onNext({ name, email, phone });
+    }
   };
 
   return (
@@ -58,9 +61,25 @@ export default function UserDetailsForm({ onNext, onBack }: Props) {
           />
         </div>
 
+        {/* PRIDANÝ CHECKBOX PRE PODMIENKY */}
+        <div className="flex items-start gap-3 py-4 px-2">
+          <input
+            id="terms"
+            type="checkbox"
+            required
+            className="mt-1 w-5 h-5 accent-black cursor-pointer shrink-0"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+          />
+          <label htmlFor="terms" className="text-[11px] leading-relaxed text-gray-500 font-medium cursor-pointer">
+            Potvrdením súhlasím so <a href="/terms" target="_blank" className="text-blue-600 font-bold hover:underline">Všeobecnými obchodnými podmienkami</a> a beriem na vedomie <a href="/privacy" target="_blank" className="text-blue-600 font-bold hover:underline">Zásady ochrany osobných údajov</a>.
+          </label>
+        </div>
+
         <button
           type="submit"
-          className="w-full bg-black text-white font-black py-5 rounded-2xl active:scale-95 transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 mt-4"
+          disabled={!name || !email || !phone || !agreed}
+          className="w-full bg-black text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 mt-2 disabled:opacity-30 disabled:active:scale-100 active:scale-95"
         >
           Pokračovať k odfoteniu <ArrowRight className="w-5 h-5" />
         </button>
@@ -68,7 +87,7 @@ export default function UserDetailsForm({ onNext, onBack }: Props) {
         <button
           type="button"
           onClick={onBack}
-          className="w-full text-gray-400 font-bold py-2 hover:text-black transition-colors text-sm uppercase tracking-widest"
+          className="w-full text-gray-400 font-bold py-2 hover:text-black transition-colors text-sm uppercase tracking-widest mt-2"
         >
           Späť
         </button>

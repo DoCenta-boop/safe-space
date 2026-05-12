@@ -375,3 +375,37 @@ export function listenToAllBookings(callback: (bookings: any[]) => void) {
 
   return unsubscribe;
 }
+// ==========================================
+// 5. CRON JOBS A AUTOMATIZÁCIA
+// ==========================================
+
+export async function cancelExpiredPendingBookings() {
+  try {
+    // Vypočítame čas spred 4 hodín
+    const fourHoursAgo = new Date();
+    fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
+
+    // Nájdeme všetky rezervácie, ktoré sú PENDING a staršie ako 4 hodiny
+    const q = query(
+      collection(db, "bookings"),
+      where("status", "==", "PENDING"),
+      where("createdAt", "<", fourHoursAgo)
+    );
+
+    const querySnapshot = await getDocs(q);
+    let canceledCount = 0;
+
+    // Postupne prejdeme každú expirovanú rezerváciu a stornujeme ju
+    for (const docSnapshot of querySnapshot.docs) {
+      // Použijeme už existujúcu funkciu, ktorá stornuje rezerváciu a zároveň UVOĽNÍ kapacitu podniku
+      await cancelBookingStatus(docSnapshot.id);
+      canceledCount++;
+    }
+
+    console.log(`Úspešne stornovaných ${canceledCount} expirovaných rezervácií.`);
+    return { success: true, canceledCount };
+  } catch (error) {
+    console.error("Chyba pri hromadnom stornovaní expirovaných rezervácií:", error);
+    return { success: false, error };
+  }
+}
