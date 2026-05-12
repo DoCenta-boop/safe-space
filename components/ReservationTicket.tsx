@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Download, Share2, CheckCircle2, Loader2, Ticket, MapPin } from 'lucide-react';
+// Pridal som import 'Clock' pre ikonku času
+import { Download, Share2, CheckCircle2, Loader2, Ticket, MapPin, Clock } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react'; 
 import { toJpeg } from 'html-to-image';
 
@@ -151,6 +152,13 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
                 <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Platnosť úschovy</span>
                 <span className="text-xl font-black text-black">24 hodín</span>
               </div>
+              
+              {/* PRIDANÝ RIADOK PRE ČAS NA ODOVZANIE DO OBRÁZKA */}
+              <div className="flex justify-between items-center pt-5 border-t border-gray-200">
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Čas na odovzdanie</span>
+                <span className="text-xl font-black text-orange-600">do 4 hodín</span>
+              </div>
+
               <div className="flex justify-between items-center pt-5 border-t border-gray-200">
                 <span className="text-sm text-gray-500 font-bold uppercase tracking-widest">Dátum vytvorenia</span>
                 <span className="text-xl font-black text-black">{formatDate()}</span>
@@ -174,7 +182,15 @@ export default function ReservationTicket({ bookingId, userName, size, userEmail
         <CheckCircle2 className="w-12 h-12 text-green-500" />
       </div>
       <h2 className="text-3xl font-black text-black mb-2 text-center tracking-tight">Rezervácia hotová!</h2>
-      <p className="text-gray-500 font-bold text-sm text-center mb-8">Uložte si lístok a ukážte ho pri príchode.</p>
+      <p className="text-gray-500 font-bold text-sm text-center mb-6">Uložte si lístok a ukážte ho pri príchode.</p>
+
+      {/* UPOZORNENIE NA 4 HODINY */}
+      <div className="bg-orange-50 border-2 border-orange-100 p-4 rounded-2xl mb-8 w-full max-w-sm flex items-start gap-3 shadow-sm">
+        <Clock className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+        <p className="text-xs font-bold text-orange-800 leading-relaxed">
+          Miesto je rezervované. Batožinu prosím <span className="font-black text-orange-900">odovzdajte do 4 hodín</span>, inak sa rezervácia miesta automaticky zruší.
+        </p>
+      </div>
 
       {/* LÍSTOK */}
       <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-xl border border-gray-100 relative overflow-hidden mb-8">
