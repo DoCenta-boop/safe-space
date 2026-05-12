@@ -55,7 +55,6 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pricing, setPricing] = useState({ small: 2, medium: 3, large: 4 });
 
-  // NOVÉ: Stavy pre vyhľadávanie existujúcej rezervácie
   const [searchContact, setSearchContact] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [foundBooking, setFoundBooking] = useState<any>(null);
@@ -110,14 +109,13 @@ export default function Home() {
     } catch (error) { alert("Chyba pri ukladaní."); } finally { setIsSubmitting(false); }
   };
 
-  // NOVÉ: Funkcia na nájdenie rezervácie
   const handleFindBooking = async () => {
     if (!searchContact) return;
     setIsSearching(true);
     const result = await getBookingByContact(searchContact);
     if (result.success) {
       setFoundBooking(result.data);
-      setStep(10); // Krok pre zobrazenie nájdenej rezervácie
+      setStep(10);
     } else {
       alert("Rezervácia s týmto e-mailom alebo telefónom sa nenašla.");
     }
@@ -153,21 +151,12 @@ export default function Home() {
   return (
     <main className="min-h-[100dvh] w-full bg-gray-50 flex flex-col font-sans text-black">
       
+      {/* HLAVIČKA - ČISTÁ, BEZ PREKRÝVANIA */}
       <div className="bg-white p-6 pt-10 shadow-sm z-10 shrink-0 relative">
         <div className="flex items-center justify-center">
           <span className="text-3xl md:text-4xl font-black text-[#0f172a] tracking-tighter">Docenta</span>
           <span className="text-3xl md:text-4xl font-black text-blue-600 tracking-tighter ml-1.5">SPACES</span>
         </div>
-
-        {/* TLAČIDLO MÁM REZERVÁCIU (Iba na úvodnej obrazovke) */}
-        {step === 0 && (
-          <button 
-            onClick={() => setStep(9)} 
-            className="absolute right-4 md:right-6 top-1/2 mt-2 -translate-y-1/2 bg-gray-50 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors border border-gray-100 flex items-center gap-1.5"
-          >
-            <Ticket className="w-3.5 h-3.5" /> Mám rezerváciu
-          </button>
-        )}
 
         {step > 0 && step < 6 && (
           <button onClick={() => setStep(step === 1 ? 0 : step - 1)} className="absolute left-4 md:left-6 top-1/2 mt-2 -translate-y-1/2 flex items-center gap-2 text-gray-400 hover:text-black transition-colors font-black uppercase text-[10px] tracking-[0.2em]">
@@ -180,9 +169,21 @@ export default function Home() {
         
         {step === 0 && (
           <div className="animate-in fade-in w-full">
-            <h2 className="text-3xl font-black mb-2 tracking-tight">Kam s batožinou?</h2>
-            <p className="text-gray-500 mb-6 font-bold text-sm">Vyberte si z našich overených podnikov a odložte si veci v bezpečí.</p>
-            {locatingError && <div className="bg-orange-50 text-orange-700 p-4 rounded-2xl text-xs font-bold mb-6 border border-orange-100">Poloha nie je povolená. Podniky sú zoradené náhodne. Pre zobrazenie vzdialeností povoľte GPS.</div>}
+            <div className="flex flex-col mb-8">
+              <h2 className="text-3xl font-black mb-2 tracking-tight">Kam s batožinou?</h2>
+              <p className="text-gray-500 mb-5 font-bold text-sm leading-relaxed">Vyberte si z našich overených podnikov a odložte si veci v bezpečí.</p>
+              
+              {/* TLAČIDLO MÁM REZERVÁCIU - TU JE LEPŠIE UMIESTNENÉ */}
+              <button 
+                onClick={() => setStep(9)} 
+                className="w-max bg-white border-2 border-gray-100 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:border-blue-600 transition-all flex items-center gap-2 shadow-sm active:scale-95"
+              >
+                <Ticket className="w-4 h-4" /> Už mám rezerváciu
+              </button>
+            </div>
+
+            {locatingError && <div className="bg-orange-50 text-orange-700 p-4 rounded-2xl text-xs font-bold mb-6 border border-orange-100">Poloha nie je povolená. Pre zobrazenie vzdialeností povoľte GPS.</div>}
+
             {!isLoadingLocations && locations.length > 0 && (
               <div className="mb-8 space-y-4">
                 <div className="relative">
@@ -195,6 +196,7 @@ export default function Home() {
                 </div>
               </div>
             )}
+            
             {isLoadingLocations ? (<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-gray-400"/></div>) : finalLocations.length === 0 ? (<div className="text-center py-10 font-bold text-gray-400 bg-white border-2 border-dashed border-gray-200 rounded-[2rem]"><p>Nenašli sa žiadne podniky.</p></div>) : (
               <div className="space-y-6">
                 {finalLocations.map(loc => (
@@ -266,7 +268,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* KROK 9: FORMULÁR PRE VYHĽADANIE EXISTUJÚCEHO LÍSTKA */}
           {step === 9 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 text-center">
               <h3 className="text-2xl font-black mb-2 tracking-tight">Nájsť môj lístok</h3>
@@ -291,7 +292,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* KROK 10: ZOBRAZENIE NÁJDENEJ REZERVÁCIE */}
           {step === 10 && foundBooking && (
             <div className="animate-in fade-in w-full">
               <ReservationTicket 
