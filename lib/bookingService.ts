@@ -409,3 +409,33 @@ export async function cancelExpiredPendingBookings() {
     return { success: false, error };
   }
 }
+// Pridaj k ostatným funkciám v lib/bookingService.ts
+
+export async function getBookingByContact(contact: string) {
+  try {
+    const qEmail = query(
+      collection(db, "bookings"), 
+      where("userEmail", "==", contact.trim()),
+      limit(5)
+    );
+    const qPhone = query(
+      collection(db, "bookings"), 
+      where("userPhone", "==", contact.trim()),
+      limit(5)
+    );
+
+    const [snapEmail, snapPhone] = await Promise.all([getDocs(qEmail), getDocs(qPhone)]);
+    const allDocs = [...snapEmail.docs, ...snapPhone.docs];
+
+    if (allDocs.length === 0) return { success: false };
+
+    // Zoradíme od najnovšej a vezmeme prvú aktívnu (alebo proste najnovšiu)
+    const bookings = allDocs.map(d => ({ id: d.id, ...d.data() }));
+    bookings.sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    return { success: true, data: bookings[0] };
+  } catch (error) {
+    console.error("Chyba vyhľadávania:", error);
+    return { success: false };
+  }
+}
